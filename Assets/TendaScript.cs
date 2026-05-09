@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement; // Adicionado para podermos ler o nome da cena e gravar
 
 public class TendaScript : MonoBehaviour
 {
@@ -48,6 +49,14 @@ public class TendaScript : MonoBehaviour
             // Salta 8 horas na perfeição
             survival.AvancarTempo(8f); 
         }
+
+        // --- NOVO: GUARDAR O JOGO ---
+        // Gravamos a cena enquanto o ecrã está preto.
+        string cenaAtual = SceneManager.GetActiveScene().name;
+        PlayerPrefs.SetString("CenaGuardada", cenaAtual);
+        PlayerPrefs.Save();
+        Debug.Log("Jogo guardado com sucesso (Cena: " + cenaAtual + ")!");
+        // ----------------------------
 
         yield return new WaitForSeconds(1.0f);
 
