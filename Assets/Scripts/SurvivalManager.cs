@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement; // ADICIONADO: Necessário para carregar as cenas de vitória e derrota
 
 public class SurvivalManager : MonoBehaviour
 {
@@ -49,6 +50,10 @@ public class SurvivalManager : MonoBehaviour
     [Tooltip("Hora a que o jogo começa (ex: 8 para 08:00)")]
     public float startHour = 8f;
 
+    [Header("Cenas de Fim de Jogo")] // ADICIONADO: Nomes das cenas
+    public string cenaVitoria = "WinScene";
+    public string cenaDerrota = "LoseScene";
+
     private float currentTimeInGameHours;
     private int currentDay = 1;
     private bool isGameFinished = false; 
@@ -91,12 +96,9 @@ public class SurvivalManager : MonoBehaviour
             {
                 currentDay = maxDays;
                 currentTimeInGameHours = 0f; 
-                isGameFinished = true;
                 
-                dayText.text = "Dia " + currentDay;
-                timeText.text = "00:00";
-                
-                Debug.Log("Sobreviveste aos 5 dias! Fim de jogo.");
+                // ADICIONADO: Substituímos o Debug.Log pela função de ganhar
+                GanharJogo();
                 return; 
             }
         }
@@ -129,6 +131,12 @@ public class SurvivalManager : MonoBehaviour
         {
             currentHealth -= healthDamageRate * Time.deltaTime;
             currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+            
+            // ADICIONADO: Verifica se morreu de fome/sede
+            if (currentHealth <= 0)
+            {
+                PerderJogo();
+            }
         }
 
         UpdateUI();
@@ -183,10 +191,36 @@ public class SurvivalManager : MonoBehaviour
     public void DrinkWater(float amount) { currentThirst = Mathf.Clamp(currentThirst + amount, 0, maxThirst); }
     public void EatFood(float amount) { currentHunger = Mathf.Clamp(currentHunger + amount, 0, maxHunger); }
 
+    // Função externa para retirar vida (ataques de animais, quedas, etc)
+    public void ReceberDano(float quantidade)
+    {
+        currentHealth -= quantidade;
+        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+        UpdateUI();
+
+        if (currentHealth <= 0 && !isGameFinished)
+        {
+            PerderJogo();
+        }
+    }
+
     void TestInputs()
     {
         if (Input.GetKeyDown(KeyCode.Q)) DrinkWater(20f);
         if (Input.GetKeyDown(KeyCode.E)) EatFood(30f);
+
+        // --- ADICIONADO: BOTÕES DE CHEAT ---
+        if (Input.GetKeyDown(KeyCode.K)) 
+        {
+            Debug.Log("Cheat ativado: Morte instantânea!");
+            ReceberDano(1000f); // Mata o jogador logo
+        }
+
+        if (Input.GetKeyDown(KeyCode.G)) 
+        {
+            Debug.Log("Cheat ativado: Ganhar jogo!");
+            GanharJogo(); // Salta logo para a vitória
+        }
     }
 
     // Função que avança o tempo quando dormes!
@@ -194,5 +228,30 @@ public class SurvivalManager : MonoBehaviour
     {
         currentTimeInGameHours += horas;
         Debug.Log("O tempo avançou " + horas + " horas.");
+    }
+
+    // --- ADICIONADO: FUNÇÕES DE FIM DE JOGO ---
+    private void GanharJogo()
+    {
+        isGameFinished = true;
+        
+        // Apaga o save para o próximo jogo começar do zero
+        PlayerPrefs.DeleteKey("CenaGuardada"); 
+        PlayerPrefs.Save();
+
+    // OLD: SceneManager.LoadScene(cenaVitoria);
+        SceneFader.instance.FazerFadeEIrParaCena(cenaVitoria); // NEW
+    }
+
+    private void PerderJogo()
+    {
+        isGameFinished = true;
+        
+        // Apaga o save para o jogador não fazer "Continue" e renascer morto
+        PlayerPrefs.DeleteKey("CenaGuardada");
+        PlayerPrefs.Save();
+
+    // OLD: SceneManager.LoadScene(cenaDerrota);
+        SceneFader.instance.FazerFadeEIrParaCena(cenaDerrota); // NEW
     }
 }

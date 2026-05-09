@@ -36,10 +36,11 @@ public class MenuPrincipal : MonoBehaviour
         grupoBotoesIniciais.interactable = true;
     }
 
-    public void NovoJogo()
+     public void NovoJogo()
     {
         PlayerPrefs.DeleteAll(); 
-        SceneManager.LoadScene(nomeCenaJogo);
+        // OLD: SceneManager.LoadScene(nomeCenaJogo);
+        SceneFader.instance.FazerFadeEIrParaCena(nomeCenaJogo); // NEW
     }
 
     public void Continuar()
@@ -47,7 +48,8 @@ public class MenuPrincipal : MonoBehaviour
         if (PlayerPrefs.HasKey("CenaGuardada"))
         {
             string cenaParaCarregar = PlayerPrefs.GetString("CenaGuardada");
-            SceneManager.LoadScene(cenaParaCarregar);
+            // OLD: SceneManager.LoadScene(cenaParaCarregar);
+            SceneFader.instance.FazerFadeEIrParaCena(cenaParaCarregar); // NEW
         }
         else
         {
