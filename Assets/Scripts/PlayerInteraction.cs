@@ -1,18 +1,18 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using TMPro; // Adiciona isto para controlar o texto
+using TMPro;
 
 public class PlayerInteraction : MonoBehaviour
 {
     public float interactionRange = 5f;
-    public TextMeshProUGUI textoInteracao; // Arrastaremos o texto para aqui
+    public TextMeshProUGUI textoInteracao;
 
     void Update()
     {
+        // Nota: Se o laser estiver a sair dos "pés" do jogador, muda transform.position para a posição da tua Câmara!
         Ray ray = new Ray(transform.position, transform.forward);
         RaycastHit hit;
 
-        // Raio para debug
         Debug.DrawRay(transform.position, transform.forward * interactionRange, Color.red);
 
         if (Physics.Raycast(ray, out hit, interactionRange))
@@ -21,25 +21,28 @@ public class PlayerInteraction : MonoBehaviour
 
             if (item != null)
             {
-                // Liga o texto na tela
-                if (textoInteracao != null) textoInteracao.gameObject.SetActive(true);
+                if (textoInteracao != null) 
+                {
+                    // --- AQUI ESTÁ A MAGIA! ---
+                    // Pega no nome do objeto 3D e junta com o texto de instrução
+                    textoInteracao.text = "Apanhar " + hit.collider.gameObject.name + " [F]";
+                    
+                    textoInteracao.gameObject.SetActive(true);
+                }
 
                 if (Keyboard.current.fKey.wasPressedThisFrame)
                 {
                     item.SerApanhado();
-                    // Desliga o texto mal apanhamos o item
                     if (textoInteracao != null) textoInteracao.gameObject.SetActive(false);
                 }
             }
             else
             {
-                // Se o raio bater em algo que NÃO é um item (chão, parede)
                 if (textoInteracao != null) textoInteracao.gameObject.SetActive(false);
             }
         }
         else
         {
-            // Se o raio não bater em nada
             if (textoInteracao != null) textoInteracao.gameObject.SetActive(false);
         }
     }

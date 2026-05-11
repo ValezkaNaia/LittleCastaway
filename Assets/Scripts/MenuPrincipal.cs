@@ -5,7 +5,7 @@ using System.Collections;
 public class MenuPrincipal : MonoBehaviour
 {
     [Header("Configurações")]
-    public string nomeCenaJogo = "Game";
+    public string nomeCenaJogo = "CutsceneIntro";
     
     [Header("Interface e Animações")]
     public GameObject painelOpcoes;
@@ -24,6 +24,7 @@ public class MenuPrincipal : MonoBehaviour
             grupoBotoesIniciais.alpha = 0f;
             grupoBotoesIniciais.interactable = false; 
             StartCoroutine(AtrasarFadeBotoes()); 
+            Cursor.visible = true;
         }
     }
 

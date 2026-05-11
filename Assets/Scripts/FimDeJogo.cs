@@ -1,33 +1,46 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.Video; // Necessário para controlar vídeos
+using UnityEngine.Video;
 
 public class FimDeJogo : MonoBehaviour
 {
     public VideoPlayer videoFinal;
-    public string nomeDoMenu = "MainMenu"; // Substitui pelo nome EXATO da tua cena do menu inicial
+    public string nomeDoMenu = "MainMenu";
 
     void Start()
     {
+        // Garante que o rato aparece nas telas de fim
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    
+
         if (videoFinal != null)
         {
-            // Isto diz ao Unity: "Quando o vídeo chegar ao fim, executa a função VoltarAoMenu"
             videoFinal.loopPointReached += VoltarAoMenu;
-        }
-        else
-        {
-            Debug.LogError("Esqueceste-te de arrastar o VideoPlayer para o script!");
         }
     }
 
-    // Esta função é chamada automaticamente quando o vídeo acaba
+    // Esta função é chamada pelo evento do vídeo (automaticamente)
     void VoltarAoMenu(VideoPlayer vp)
     {
-        // Opcional: Desbloquear o rato para o jogador poder clicar no menu
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        IrParaMenu();
+    }
 
-        // OLD: SceneManager.LoadScene(nomeDoMenu);
-        SceneFader.instance.FazerFadeEIrParaCena(nomeDoMenu); // NEW
+    // 1. ESTA É A NOVA FUNÇÃO PARA O BOTÃO
+    public void BotaoVoltarAoMenu()
+    {
+        IrParaMenu();
+    }
+
+    private void IrParaMenu()
+    {
+        if (SceneFader.instance != null)
+        {
+            SceneFader.instance.FazerFadeEIrParaCena(nomeDoMenu);
+        }
+        else
+        {
+            SceneManager.LoadScene(nomeDoMenu);
+        }
     }
 }
