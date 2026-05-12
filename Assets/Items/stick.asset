@@ -16,3 +16,6 @@ MonoBehaviour:
   itemIcon: {fileID: 21300000, guid: 1d16796396116ce49bff85752f99a0ff, type: 3}
   prefabModel: {fileID: 1682156727902844, guid: 40d835238fc5d8c4ba8c990e685defef, type: 3}
   isStackable: 0
+  holdOffset: {x: 0, y: 0, z: 0}
+  holdRotation: {x: 0, y: 90, z: 0}
+  holdScale: {x: 0, y: 0, z: 0}
