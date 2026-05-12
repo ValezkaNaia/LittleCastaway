@@ -115,7 +115,7 @@ public class SurvivalManager : MonoBehaviour
         
         int minutes = Mathf.FloorToInt((currentTimeInGameHours - hours) * 60);
         
-        dayText.text = "Dia " + currentDay;
+        dayText.text = "Day " + currentDay;
         timeText.text = string.Format("{0:00}:{1:00}", hours, minutes);
     }
 
