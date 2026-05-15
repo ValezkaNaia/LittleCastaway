@@ -1,42 +1,102 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 
 public class MenuOpcoes : MonoBehaviour
 {
+    [Header("Onde estamos?")]
+    public bool estaNoMenuPrincipal = false;
+
+    [Header("Menu de Pausa")]
+    public GameObject painelOpcoes; 
+    public static bool jogoPausado = false; // Tornámos isto "public static" para o Player poder ler!
+
     [Header("Controlos da Interface")]
     public Slider sliderVolume;
     public Toggle toggleEcraInteiro;
+    
+    [Header("Câmaras")]
+    public Toggle toggleCamera;
+    public GameObject cameraPrimeiraPessoa;
+    public GameObject cameraTerceiraPessoa;
 
     void Start()
     {
-        // Quando o menu abre, carregamos as definições guardadas
         if (PlayerPrefs.HasKey("VolumeGuardado"))
         {
             float volumeSalvo = PlayerPrefs.GetFloat("VolumeGuardado");
-            sliderVolume.value = volumeSalvo;
-            AudioListener.volume = volumeSalvo; // Aplica o som
+            if(sliderVolume != null) sliderVolume.value = volumeSalvo;
+            AudioListener.volume = volumeSalvo;
         }
 
         if (PlayerPrefs.HasKey("EcraInteiroGuardado"))
         {
-            // O PlayerPrefs não guarda "verdadeiro/falso", por isso guardamos como 1 ou 0
             bool ecraInteiroSalvo = PlayerPrefs.GetInt("EcraInteiroGuardado") == 1;
-            toggleEcraInteiro.isOn = ecraInteiroSalvo;
-            Screen.fullScreen = ecraInteiroSalvo; // Aplica o ecrã inteiro
+            if(toggleEcraInteiro != null) toggleEcraInteiro.isOn = ecraInteiroSalvo;
+            Screen.fullScreen = ecraInteiroSalvo;
+        }
+
+        if (!estaNoMenuPrincipal) ContinuarJogo(); 
+    }
+
+    void Update()
+    {
+        if (!estaNoMenuPrincipal)
+        {
+            if (Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                if (jogoPausado) ContinuarJogo();
+                else PausarJogo();
+            }
         }
     }
 
-    // Função para alterar o volume (recebe um número do Slider)
-    public void AlterarVolume(float valorVolume)
+    public void PausarJogo()
     {
-        AudioListener.volume = valorVolume; // Muda o som global do jogo
-        PlayerPrefs.SetFloat("VolumeGuardado", valorVolume); // Guarda no PC
+        if (painelOpcoes != null) painelOpcoes.SetActive(true);
+        Time.timeScale = 0f; 
+        jogoPausado = true;
+
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
     }
 
-    // Função para alterar o ecrã inteiro (recebe verdadeiro/falso do Toggle)
+    public void ContinuarJogo()
+    {
+        if (painelOpcoes != null) painelOpcoes.SetActive(false);
+        Time.timeScale = 1f; 
+        jogoPausado = false;
+
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+    }
+
+    public void AlterarVolume(float valorVolume)
+    {
+        AudioListener.volume = valorVolume;
+        PlayerPrefs.SetFloat("VolumeGuardado", valorVolume);
+    }
+
     public void AlterarEcraInteiro(bool eEcraInteiro)
     {
-        Screen.fullScreen = eEcraInteiro; // Liga/Desliga ecrã inteiro
-        PlayerPrefs.SetInt("EcraInteiroGuardado", eEcraInteiro ? 1 : 0); // Guarda no PC
+        Screen.fullScreen = eEcraInteiro;
+        PlayerPrefs.SetInt("EcraInteiroGuardado", eEcraInteiro ? 1 : 0);
+    }
+
+    public void AlterarCamera(bool isPrimeiraPessoa)
+    {
+        if (cameraPrimeiraPessoa != null && cameraTerceiraPessoa != null)
+        {
+            cameraPrimeiraPessoa.SetActive(isPrimeiraPessoa);
+            cameraTerceiraPessoa.SetActive(!isPrimeiraPessoa);
+        }
+    }
+
+    public void SairParaMenu()
+    {
+        Time.timeScale = 1f; 
+        jogoPausado = false; // Garante que reinicia a variável
+        if (SceneFader.instance != null) SceneFader.instance.FazerFadeEIrParaCena("MainMenu"); 
+        else UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
     }
 }
