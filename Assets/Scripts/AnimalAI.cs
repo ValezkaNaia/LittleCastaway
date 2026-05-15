@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.AI; // Necessário para a IA andar
+using UnityEngine.AI;
 
 [RequireComponent(typeof(NavMeshAgent))]
 public class AnimalAI : MonoBehaviour
@@ -12,11 +12,16 @@ public class AnimalAI : MonoBehaviour
     public float distanciaDetecao = 15f;
     public bool darCarneAoMorrer = true;
 
+    [Header("Combate (Ataque)")]
+    public float danoAtaque = 15f; // Quanto de vida tira ao jogador
+    public float tempoEntreAtaques = 2f; // Espera 2 segundos antes de morder outra vez
+    private float tempoDoUltimoAtaque = 0f;
+
     [Header("Pets (Cão e Gato)")]
     public int macasDadas = 0;
     private int macasParaDomesticar = 5;
     public bool domesticado = false;
-    private bool provocado = false; // Se bateres no pet, ele ataca
+    private bool provocado = false;
 
     private NavMeshAgent agente;
     private Transform player;
@@ -26,7 +31,6 @@ public class AnimalAI : MonoBehaviour
         agente = GetComponent<NavMeshAgent>();
         player = GameObject.FindGameObjectWithTag("Player").transform;
         
-        // Põe o animal a andar pela ilha de 5 em 5 segundos
         InvokeRepeating("AndarAleatoriamente", Random.Range(0f, 2f), 5f);
     }
 
@@ -36,32 +40,48 @@ public class AnimalAI : MonoBehaviour
 
         float distanciaProPlayer = Vector3.Distance(transform.position, player.position);
 
-        // 1. SE FOR DOMESTICADO: Segue o jogador
+        // 1. DOMESTICADO
         if (domesticado)
         {
             if (distanciaProPlayer > 4f) agente.SetDestination(player.position);
             return;
         }
 
-        // 2. SE FOR PRESA (Galinha/Veado): Foge se o jogador chegar perto
+        // 2. PRESA
         if (tipoAnimal == Comportamento.Presa)
         {
             if (distanciaProPlayer < distanciaDetecao) FogirDoPlayer();
         }
         
-        // 3. SE FOR PREDADOR (Tigre) OU PET PROVOCADO: Ataca!
+        // 3. PREDADOR OU PET PROVOCADO
         else if (tipoAnimal == Comportamento.Predador || provocado)
         {
             if (distanciaProPlayer < distanciaDetecao)
             {
                 agente.SetDestination(player.position);
+                
+                // Se estiver a 2 metros ou menos do jogador, ATACA!
                 if (distanciaProPlayer <= 2f) 
                 {
-                    // Aqui entrará a animação/dano de ataque ao jogador no futuro
-                    // Debug.Log(gameObject.name + " atacou o jogador!");
+                    if (Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques)
+                    {
+                        AtacarJogador();
+                    }
                 }
             }
         }
+    }
+
+    void AtacarJogador()
+    {
+        tempoDoUltimoAtaque = Time.time; // Regista a hora do ataque para o cooldown
+        
+        Debug.Log(gameObject.name + " deu " + danoAtaque + " de dano ao jogador!");
+
+        // --- AQUI VAIS LIGAR AO SCRIPT DA VIDA DO TEU JOGADOR ---
+        // Exemplo:
+        // GestorDeVida vidaPlayer = player.GetComponent<GestorDeVida>();
+        // if (vidaPlayer != null) vidaPlayer.PerderVida(danoAtaque);
     }
 
     void AndarAleatoriamente()
@@ -84,11 +104,10 @@ public class AnimalAI : MonoBehaviour
         agente.SetDestination(novaPosicao);
     }
 
-    // Função para o teu Player chamar quando bater no animal
     public void ReceberDano(float dano)
     {
         vida -= dano;
-        if (tipoAnimal == Comportamento.Pet) provocado = true; // Traíste o pet!
+        if (tipoAnimal == Comportamento.Pet) provocado = true; 
         
         if (vida <= 0) Morrer();
     }
@@ -97,29 +116,17 @@ public class AnimalAI : MonoBehaviour
     {
         if (darCarneAoMorrer && tipoAnimal != Comportamento.Pet)
         {
-            // FUTURO: Instantiate(prefabDaCarne, transform.position, Quaternion.identity);
             Debug.Log(gameObject.name + " morreu e vai dropar carne!");
         }
-        else if (tipoAnimal == Comportamento.Pet)
-        {
-            Debug.Log("Mataste um pet, não recebes nada seu monstro!");
-        }
         
-        Destroy(gameObject); // O animal desaparece
+        Destroy(gameObject);
     }
 
-    // Função para o teu PlayerInteraction chamar quando carregar no [F] com maçãs
     public void TentarDomesticar()
     {
         if (tipoAnimal != Comportamento.Pet || domesticado || provocado) return;
 
         macasDadas++;
-        Debug.Log("Deste uma maçã ao " + gameObject.name + "! (" + macasDadas + "/5)");
-
-        if (macasDadas >= macasParaDomesticar)
-        {
-            domesticado = true;
-            Debug.Log(gameObject.name + " agora é teu amigo!");
-        }
+        if (macasDadas >= macasParaDomesticar) domesticado = true;
     }
 }
