@@ -9,7 +9,9 @@ public class PlayerInteraction : MonoBehaviour
 
     void Update()
     {
-        // Nota: Se o laser estiver a sair dos "pés" do jogador, muda transform.position para a posição da tua Câmara!
+        // Se estiveres a ler uma nota ou no menu de coleção, não podes interagir com o mundo!
+        if (NoteManager.isReading) return;
+
         Ray ray = new Ray(transform.position, transform.forward);
         RaycastHit hit;
 
@@ -18,21 +20,33 @@ public class PlayerInteraction : MonoBehaviour
         if (Physics.Raycast(ray, out hit, interactionRange))
         {
             ItemObject item = hit.collider.GetComponent<ItemObject>();
+            WorldNote nota = hit.collider.GetComponent<WorldNote>();
 
             if (item != null)
             {
                 if (textoInteracao != null) 
                 {
-                    // --- AQUI ESTÁ A MAGIA! ---
-                    // Pega no nome do objeto 3D e junta com o texto de instrução
                     textoInteracao.text = "Apanhar " + hit.collider.gameObject.name + " [F]";
-                    
                     textoInteracao.gameObject.SetActive(true);
                 }
 
                 if (Keyboard.current.fKey.wasPressedThisFrame)
                 {
                     item.SerApanhado();
+                    if (textoInteracao != null) textoInteracao.gameObject.SetActive(false);
+                }
+            }
+            else if (nota != null) 
+            {
+                if (textoInteracao != null) 
+                {
+                    textoInteracao.text = "Ler " + hit.collider.gameObject.name + " [F]";
+                    textoInteracao.gameObject.SetActive(true);
+                }
+
+                if (Keyboard.current.fKey.wasPressedThisFrame)
+                {
+                    nota.LerNota();
                     if (textoInteracao != null) textoInteracao.gameObject.SetActive(false);
                 }
             }
