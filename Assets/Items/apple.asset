@@ -12,7 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 31a811efa361a2247bfd34ca84ec2a58, type: 3}
   m_Name: apple
   m_EditorClassIdentifier: Assembly-CSharp::ItemData
-  itemName: 
-  itemIcon: {fileID: 0}
-  prefabModel: {fileID: 0}
-  isStackable: 0
+  itemName: apple
+  itemIcon: {fileID: 21300000, guid: bded8b67fbb9fa444a71dde26fba8812, type: 3}
+  prefabModel: {fileID: 8814092482929038132, guid: 53a440911d2c3a54e980d8098965d99f, type: 3}
+  isStackable: 1
+  holdOffset: {x: 0, y: 0, z: 0}
+  holdRotation: {x: 0, y: 0, z: 0}
+  holdScale: {x: 0, y: 0, z: 0}

@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 31a811efa361a2247bfd34ca84ec2a58, type: 3}
-  m_Name: wood
+  m_Name: fireplace
   m_EditorClassIdentifier: Assembly-CSharp::ItemData
-  itemName: wood
-  itemIcon: {fileID: 21300000, guid: d7c732984ee160843b7535e5f0c12e3f, type: 3}
-  prefabModel: {fileID: 9198236326761331808, guid: 717358a9e2dc8224bac6a2f719b48996, type: 3}
-  isStackable: 1
+  itemName: fireplace
+  itemIcon: {fileID: 21300000, guid: d863920f7bbc85740b1e5049e54e403e, type: 3}
+  prefabModel: {fileID: 718659915730904673, guid: fd2a35f4603b5bd45b6b41ecba1f8f83, type: 3}
+  isStackable: 0
   holdOffset: {x: 0, y: 0, z: 0}
   holdRotation: {x: 0, y: 0, z: 0}
   holdScale: {x: 0, y: 0, z: 0}

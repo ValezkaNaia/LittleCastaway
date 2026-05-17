@@ -15,7 +15,7 @@ MonoBehaviour:
   itemName: coco
   itemIcon: {fileID: 21300000, guid: 90727b3f1f5bdf54b8851e5e800d97f1, type: 3}
   prefabModel: {fileID: 1510441834853492, guid: a1a4d92e94bd0c644b1cb8f0c98c26a8, type: 3}
-  isStackable: 0
+  isStackable: 1
   holdOffset: {x: 0, y: 0, z: 0}
   holdRotation: {x: 0, y: 0, z: 0}
   holdScale: {x: 0, y: 0, z: 0}
