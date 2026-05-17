@@ -2,9 +2,12 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
+using System.Collections;
 
 public class SurvivalManager : MonoBehaviour
 {
+    public static SurvivalManager instance; 
+
     [Header("Elementos de UI - Barras")]
     public Slider healthBar;
     public Slider hungerBar;
@@ -17,7 +20,6 @@ public class SurvivalManager : MonoBehaviour
     public TextMeshProUGUI timeText;
 
     [Header("Ciclo Dia/Noite")]
-    [Tooltip("Arrasta a tua Directional Light (Sol) da hierarquia para aqui")]
     public Transform sunTransform;
 
     [Header("Estatísticas Máximas")]
@@ -26,37 +28,47 @@ public class SurvivalManager : MonoBehaviour
     public float maxThirst = 100f;
     public float maxStamina = 100f;
 
-    // Valores atuais
     private float currentHealth;
     private float currentHunger;
     private float currentThirst;
     private float currentStamina;
 
     [Header("Taxas (Fome/Sede)")]
-    public float hungerDepletionRate = 1f;
-    public float thirstDepletionRate = 2f;
-    public float healthDamageRate = 5f;
+    public float hungerDepletionRate = 0.2f; 
+    public float thirstDepletionRate = 0.3f; 
+    [Tooltip("Velocidade com que perde vida quando a fome ou a sede batem no 0 (0.5f significa 1 de vida a cada 2 segundos)")]
+    public float starvationDamageRate = 0.5f; // ADICIONADO: Dano lento por fome/sede
 
     [Header("Mecânica de Stamina")]
-    public float staminaDrainRate = 30f;  
+    public float staminaDrainRate = 25f;  
     public float staminaRegenRate = 15f;  
-    private bool isExhausted = false;     
+    public bool isExhausted = false;     
  
     [Header("Sistema de Tempo")] 
-    [Tooltip("Duração de 1 dia no jogo em segundos reais (600s = 10 minutos)")]
     public float dayDurationInRealSeconds = 600f; 
-    [Tooltip("Número máximo de dias até o jogo acabar")]
     public int maxDays = 5;
-    [Tooltip("Hora a que o jogo começa (ex: 8 para 08:00)")]
     public float startHour = 8f;
 
     [Header("Cenas de Fim de Jogo")] 
     public string cenaVitoria = "WinScene";
     public string cenaDerrota = "LoseScene";
 
-    private float currentTimeInGameHours;
+    [Header("Sistema de Fadiga e Sono")]
+    public CanvasGroup visaoTurvaOverlay; 
+    public GameObject painelEcraPreto; 
+    public TextMeshProUGUI textoSonoUI;
+    
+    [Tooltip("Quantas horas IN-GAME o jogador aguenta sem dormir (36h = 1 dia e meio)")]
+    public float horasParaDesmaiar = 36f; 
+    public float danoPorDesmaio = 20f;
+
+    private float currentFatigue = 0f;
+    public float currentTimeInGameHours; 
     private int currentDay = 1;
     private bool isGameFinished = false; 
+    private bool estaADormir = false; 
+
+    void Awake() { if (instance == null) instance = this; }
 
     void Start()
     {
@@ -64,21 +76,23 @@ public class SurvivalManager : MonoBehaviour
         currentHunger = maxHunger;
         currentThirst = maxThirst;
         currentStamina = maxStamina;
-
         currentTimeInGameHours = startHour;
 
         if (staminaBarObject != null) staminaBarObject.SetActive(false);
+        if (painelEcraPreto != null) painelEcraPreto.SetActive(false);
+        if (visaoTurvaOverlay != null) visaoTurvaOverlay.alpha = 0f;
 
         UpdateUI();
     }
 
     void Update()
     {
-        if (isGameFinished) return;
+        if (isGameFinished || estaADormir || NoteManager.isReading) return;
 
         HandleTime();
         HandleStats();
         HandleStamina();
+        HandleFatigue(); 
     }
 
     void HandleTime()
@@ -108,7 +122,6 @@ public class SurvivalManager : MonoBehaviour
 
         int hours = Mathf.FloorToInt(currentTimeInGameHours);
         if (hours >= 24) hours = 0; 
-        
         int minutes = Mathf.FloorToInt((currentTimeInGameHours - hours) * 60);
         
         dayText.text = "Day " + currentDay;
@@ -117,18 +130,21 @@ public class SurvivalManager : MonoBehaviour
 
     void HandleStats()
     {
+        // Reduz a fome e a sede continuamente
         if (currentHunger > 0) currentHunger -= hungerDepletionRate * Time.deltaTime;
         if (currentThirst > 0) currentThirst -= thirstDepletionRate * Time.deltaTime;
 
         currentHunger = Mathf.Clamp(currentHunger, 0, maxHunger);
         currentThirst = Mathf.Clamp(currentThirst, 0, maxThirst);
 
+        // MODIFICADO: Se a fome OU a sede chegarem a 0, o jogador começa a perder vida lentamente
         if (currentHunger <= 0 || currentThirst <= 0)
         {
-            currentHealth -= healthDamageRate * Time.deltaTime;
+            currentHealth -= starvationDamageRate * Time.deltaTime;
             currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
-            
-            if (currentHealth <= 0)
+
+            // Se a vida chegar a zero por fome/sede, o jogo acaba
+            if (currentHealth <= 0 && !isGameFinished)
             {
                 PerderJogo();
             }
@@ -144,43 +160,105 @@ public class SurvivalManager : MonoBehaviour
         if (isTryingToRun)
         {
             currentStamina -= staminaDrainRate * Time.deltaTime;
-
-            if (currentStamina <= 0)
-            {
-                currentStamina = 0;
-                isExhausted = true; 
-            }
+            if (currentStamina <= 0) { currentStamina = 0; isExhausted = true; }
         }
         else
         {
             currentStamina += staminaRegenRate * Time.deltaTime;
-
-            if (currentStamina >= maxStamina)
-            {
-                currentStamina = maxStamina;
-                isExhausted = false;
-            }
+            if (currentStamina >= 20f && isExhausted) isExhausted = false; 
+            if (currentStamina >= maxStamina) currentStamina = maxStamina;
         }
 
         staminaBar.value = currentStamina / maxStamina;
 
         if (currentStamina == maxStamina && !Input.GetKey(KeyCode.LeftShift))
         {
-            if (staminaBarObject != null && staminaBarObject.activeSelf)
-                staminaBarObject.SetActive(false);
+            if (staminaBarObject != null && staminaBarObject.activeSelf) staminaBarObject.SetActive(false);
         }
         else
         {
-            if (staminaBarObject != null && !staminaBarObject.activeSelf)
-                staminaBarObject.SetActive(true);
+            if (staminaBarObject != null && !staminaBarObject.activeSelf) staminaBarObject.SetActive(true);
         }
     }
 
-    void UpdateUI()
+    void HandleFatigue()
     {
-        healthBar.value = currentHealth / maxHealth;
-        hungerBar.value = currentHunger / maxHunger;
-        thirstBar.value = currentThirst / maxThirst;
+        float inGameHoursPerRealSecond = 24f / dayDurationInRealSeconds;
+        float horasPassadasNesteFrame = Time.deltaTime * inGameHoursPerRealSecond;
+
+        currentFatigue += (100f / horasParaDesmaiar) * horasPassadasNesteFrame;
+        currentFatigue = Mathf.Clamp(currentFatigue, 0f, 100f);
+
+        if (currentFatigue >= 70f)
+        {
+            if (visaoTurvaOverlay != null)
+            {
+                float progressoCansaco = (currentFatigue - 70f) / 30f;
+                visaoTurvaOverlay.alpha = progressoCansaco * 0.90f; 
+            }
+        }
+        else
+        {
+            if (visaoTurvaOverlay != null) visaoTurvaOverlay.alpha = 0f;
+        }
+
+        if (currentFatigue >= 100f) ForçarDesmaio();
+    }
+
+    private void ForçarDesmaio()
+    {
+        currentFatigue = 0f; 
+        if (textoSonoUI != null) textoSonoUI.text = "You were so exhausted that you passed out...";
+        StartCoroutine(RotinaSono(true));
+    }
+
+    private IEnumerator RotinaSono(bool foiForçado)
+    {
+        estaADormir = true;
+        CanvasGroup cg = null;
+        
+        if (painelEcraPreto != null) 
+        {
+            cg = painelEcraPreto.GetComponent<CanvasGroup>();
+            if (cg == null) cg = painelEcraPreto.AddComponent<CanvasGroup>();
+
+            painelEcraPreto.SetActive(true);
+            cg.alpha = 0f; 
+        }
+
+        // FADE IN
+        float t = 0f;
+        while (t < 1.0f)
+        {
+            t += Time.deltaTime / 1.5f;
+            if (cg != null) cg.alpha = Mathf.Clamp01(t);
+            yield return null;
+        }
+        
+        if (foiForçado) ReceberDano(danoPorDesmaio);
+
+        yield return new WaitForSecondsRealtime(3.0f);
+
+        AvancarTempo(8f);
+        ResetarCansaco();
+
+        // FADE OUT
+        t = 1f;
+        while (t > 0f)
+        {
+            t -= Time.deltaTime / 2.0f;
+            if (cg != null) cg.alpha = Mathf.Clamp01(t);
+            yield return null;
+        }
+
+        if (painelEcraPreto != null) painelEcraPreto.SetActive(false);
+        estaADormir = false;
+    }
+
+    public void ResetarCansaco()
+    {
+        currentFatigue = 0f; 
+        if (visaoTurvaOverlay != null) visaoTurvaOverlay.alpha = 0f; 
     }
 
     public void DrinkWater(float amount) { currentThirst = Mathf.Clamp(currentThirst + amount, 0, maxThirst); }
@@ -191,17 +269,16 @@ public class SurvivalManager : MonoBehaviour
         currentHealth -= quantidade;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
         UpdateUI();
-
-        if (currentHealth <= 0 && !isGameFinished)
-        {
-            PerderJogo();
-        }
+        if (currentHealth <= 0 && !isGameFinished) PerderJogo();
     }
 
-    public void AvancarTempo(float horas)
+    public void AvancarTempo(float horas) { currentTimeInGameHours += horas; }
+
+    void UpdateUI()
     {
-        currentTimeInGameHours += horas;
-        Debug.Log("O tempo avançou " + horas + " horas.");
+        healthBar.value = currentHealth / maxHealth;
+        hungerBar.value = currentHunger / maxHunger;
+        thirstBar.value = currentThirst / maxThirst;
     }
 
     private void GanharJogo()

@@ -8,7 +8,7 @@ public class Ingrediente
     public int quantidade;
 }
 
-[CreateAssetMenu(fileName = "Nova Receita", menuName = "Inventario/Receita")]
+[CreateAssetMenu(fileName = "New Recipe", menuName = "Inventory/Recipe")]
 public class RecipeData : ScriptableObject
 {
     public string nomeReceita;

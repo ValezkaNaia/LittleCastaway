@@ -26,7 +26,7 @@ public class PlayerInteraction : MonoBehaviour
             {
                 if (textoInteracao != null) 
                 {
-                    textoInteracao.text = "Apanhar " + hit.collider.gameObject.name + " [F]";
+                    textoInteracao.text = "Pick up " + hit.collider.gameObject.name + " [F]";
                     textoInteracao.gameObject.SetActive(true);
                 }
 
@@ -40,7 +40,7 @@ public class PlayerInteraction : MonoBehaviour
             {
                 if (textoInteracao != null) 
                 {
-                    textoInteracao.text = "Ler " + hit.collider.gameObject.name + " [F]";
+                    textoInteracao.text = "Read " + hit.collider.gameObject.name + " [F]";
                     textoInteracao.gameObject.SetActive(true);
                 }
 

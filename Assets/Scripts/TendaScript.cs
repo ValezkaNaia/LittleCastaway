@@ -2,7 +2,8 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement; // Adicionado para podermos ler o nome da cena e gravar
+using UnityEngine.SceneManagement;
+using TMPro; 
 
 public class TendaScript : MonoBehaviour
 {
@@ -12,18 +13,54 @@ public class TendaScript : MonoBehaviour
     public GameObject interactionUI;
     public Image fadeImage;
 
+    [Header("Sistema de Avisos")]
+    public TextMeshProUGUI avisoTexto; 
+    public string mensagemCedo = "It's too early to sleep! You can only rest after 19:00.";
+
     [Header("Configurações")]
     public float tempoFade = 1.0f;
+
+    private Coroutine avisoCoroutine; 
+
+    void Start()
+    {
+        if (avisoTexto != null) avisoTexto.gameObject.SetActive(false);
+    }
 
     void Update()
     {
         if (playerPerto && Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
         {
-            StartCoroutine(SequenciaDormir());
+            SurvivalManager survival = SurvivalManager.instance;
+
+            if (survival.currentTimeInGameHours >= 19f || survival.currentTimeInGameHours < 6f)
+            {
+                if (avisoTexto != null) avisoTexto.gameObject.SetActive(false);
+                StartCoroutine(SequenciaDormir(survival));
+            }
+            else
+            {
+                MostrarAviso(mensagemCedo);
+            }
         }
     }
 
-    IEnumerator SequenciaDormir()
+    private void MostrarAviso(string mensagem)
+    {
+        if (avisoTexto == null) return;
+        if (avisoCoroutine != null) StopCoroutine(avisoCoroutine);
+        avisoCoroutine = StartCoroutine(RotinaOcultarAviso(mensagem));
+    }
+
+    private IEnumerator RotinaOcultarAviso(string mensagem)
+    {
+        avisoTexto.text = mensagem;
+        avisoTexto.gameObject.SetActive(true);
+        yield return new WaitForSeconds(3f);
+        avisoTexto.gameObject.SetActive(false);
+    }
+
+    IEnumerator SequenciaDormir(SurvivalManager survival)
     {
         if (fadeImage == null) yield break;
 
@@ -31,7 +68,6 @@ public class TendaScript : MonoBehaviour
         if (interactionUI != null) interactionUI.SetActive(false);
         fadeImage.gameObject.SetActive(true);
 
-        // --- ESCURECER ---
         float t = 0;
         while (t < 1.0f)
         {
@@ -42,25 +78,19 @@ public class TendaScript : MonoBehaviour
 
         yield return new WaitForSeconds(1.0f);
 
-        // --- PASSAR O TEMPO ---
-        SurvivalManager survival = FindFirstObjectByType<SurvivalManager>();
         if (survival != null)
         {
-            // Salta 8 horas na perfeição
             survival.AvancarTempo(8f); 
+            survival.ResetarCansaco(); 
         }
 
-        // --- NOVO: GUARDAR O JOGO ---
-        // Gravamos a cena enquanto o ecrã está preto.
         string cenaAtual = SceneManager.GetActiveScene().name;
         PlayerPrefs.SetString("CenaGuardada", cenaAtual);
         PlayerPrefs.Save();
-        Debug.Log("Jogo guardado com sucesso (Cena: " + cenaAtual + ")!");
-        // ----------------------------
+        Debug.Log("Game saved successfully (Scene: " + cenaAtual + ")!");
 
         yield return new WaitForSeconds(1.0f);
 
-        // --- CLAREAR ---
         while (t > 0f)
         {
             t -= Time.deltaTime / tempoFade;

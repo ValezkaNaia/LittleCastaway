@@ -12,3 +12,4 @@ public class ForcarVisao : MonoBehaviour
         if (cam != null) cam.farClipPlane = distanciaVisao;
     }
 }
+//penso que se possa apagar
