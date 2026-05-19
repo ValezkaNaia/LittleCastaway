@@ -13,15 +13,14 @@ public class PlayerInteraction : MonoBehaviour
 
     void Start()
     {
-        // Garante que o laser segue rigorosamente para onde o jogador olha com a câmara
         cam = Camera.main.transform;
     }
 
     void Update()
     {
+        // Se estiveres a ler uma nota, bloqueia a interação com outras coisas
         if (NoteManager.isReading) return;
 
-        // Dispara o laser a partir dos olhos (Câmara) e não da base do jogador
         Ray ray = new Ray(cam.position, cam.forward);
         RaycastHit hit;
 
@@ -32,13 +31,17 @@ public class PlayerInteraction : MonoBehaviour
         if (Physics.Raycast(ray, out hit, interactionRange))
         {
             // =================================================================
-            // 1. APANHAR ITENS DO CHÃO (Sistema Antigo - Tecla F)
+            // 1. APANHAR ITENS DO CHÃO
             // =================================================================
             ItemObject item = hit.collider.GetComponent<ItemObject>();
             if (item != null)
             {
                 olhouParaAlgoInterativo = true;
-                DefinirTexto("Pick up " + hit.collider.gameObject.name + " [F]");
+                
+                // Limpa o "(Clone)" e os espaços do nome que está na Hierarchy
+                string nomeDoItem = hit.collider.gameObject.name.Replace("(Clone)", "").Trim();
+                
+                DefinirTexto("Pick up " + nomeDoItem + " [F]");
 
                 if (Keyboard.current.fKey.wasPressedThisFrame)
                 {
@@ -48,7 +51,24 @@ public class PlayerInteraction : MonoBehaviour
             }
 
             // =================================================================
-            // 2. LER NOTAS (Sistema Antigo - Tecla F)
+            // 2. LER NOTAS
+            // =================================================================
+            else if (hit.collider.GetComponent<WorldNote>() != null)
+            {
+                WorldNote nota = hit.collider.GetComponent<WorldNote>();
+                olhouParaAlgoInterativo = true;
+                
+                DefinirTexto("Read Note [F]");
+
+                if (Keyboard.current.fKey.wasPressedThisFrame)
+                {
+                    nota.LerNota();
+                    EsconderTexto();
+                }
+            }
+
+            // =================================================================
+            // 3. ATACAR ANIMAIS COM A LANÇA
             // =================================================================
             else if (hit.collider.CompareTag("Animal"))
             {
@@ -60,7 +80,7 @@ public class PlayerInteraction : MonoBehaviour
 
                     if (armaEquipada != null && armaEquipada.ehLanca)
                     {
-                        DefinirTexto("Premir [E] para Atacar com a Lança");
+                        DefinirTexto("Press [E] to Attack with Spear");
                         if (Keyboard.current.eKey.wasPressedThisFrame)
                         {
                             armaEquipada.JogarAnimacaoGatilho();
@@ -69,13 +89,13 @@ public class PlayerInteraction : MonoBehaviour
                     }
                     else
                     {
-                        DefinirTexto("Precisas de equipar a Lança!");
+                        DefinirTexto("You need to equip a Spear!");
                     }
                 }
             }
 
             // =================================================================
-            // 4. CORTAR ÁRVORES DE MADEIRA (Sistema Novo - Tecla E)
+            // 4. CORTAR ÁRVORES DE MADEIRA
             // =================================================================
             else if (hit.collider.CompareTag("ArvoreMadeira"))
             {
@@ -87,7 +107,7 @@ public class PlayerInteraction : MonoBehaviour
 
                     if (armaEquipada != null && armaEquipada.ehMachado)
                     {
-                        DefinirTexto("Premir [E] para Cortar Árvore");
+                        DefinirTexto("Press [E] to Chop Tree");
                         if (Keyboard.current.eKey.wasPressedThisFrame)
                         {
                             armaEquipada.JogarAnimacaoGatilho();
@@ -96,13 +116,13 @@ public class PlayerInteraction : MonoBehaviour
                     }
                     else
                     {
-                        DefinirTexto("Precisas de equipar o Machado!");
+                        DefinirTexto("You need to equip an Axe!");
                     }
                 }
             }
 
             // =================================================================
-            // 5. APANHAR FRUTA DAS ÁRVORES (Sistema Novo - Tecla E)
+            // 5. APANHAR FRUTA DAS ÁRVORES
             // =================================================================
             else if (hit.collider.CompareTag("ArvoreFruta"))
             {
@@ -113,29 +133,26 @@ public class PlayerInteraction : MonoBehaviour
 
                     if (arvoreFruta.TemFruta())
                     {
-                        DefinirTexto("Premir [E] para Apanhar Fruta");
+                        DefinirTexto("Press [E] to Harvest Fruit");
 
                         if (Keyboard.current.eKey.wasPressedThisFrame)
                         {
                             arvoreFruta.ApanharFruta();
                             
-                            // Mostra um feedback imediato no ecrã de que foi guardado
                             if (arvoreFruta.itemFruta != null)
                             {
-                                DefinirTexto(arvoreFruta.itemFruta.itemName + " guardado no inventário!");
+                                DefinirTexto(arvoreFruta.itemFruta.itemName + " added to inventory!");
                             }
                         }
                     }
                     else
                     {
-                        // Se a árvore já foi colhida, mostra esta mensagem em vez de pedir para carregar no E
-                        DefinirTexto("Esta árvore já não tem mais fruta.");
+                        DefinirTexto("This tree has no fruit left.");
                     }
                 }
             }
         }
 
-        // Se o jogador não estiver a olhar para nada válido, desativa o texto na hora
         if (!olhouParaAlgoInterativo)
         {
             EsconderTexto();
@@ -159,66 +176,3 @@ public class PlayerInteraction : MonoBehaviour
         }
     }
 }
-/*using UnityEngine;
-using UnityEngine.InputSystem;
-using TMPro;
-
-public class PlayerInteraction : MonoBehaviour
-{
-    public float interactionRange = 5f;
-    public TextMeshProUGUI textoInteracao;
-
-    void Update()
-    {
-        // Se estiveres a ler uma nota ou no menu de coleção, não podes interagir com o mundo!
-        if (NoteManager.isReading) return;
-
-        Ray ray = new Ray(transform.position, transform.forward);
-        RaycastHit hit;
-
-        Debug.DrawRay(transform.position, transform.forward * interactionRange, Color.red);
-
-        if (Physics.Raycast(ray, out hit, interactionRange))
-        {
-            ItemObject item = hit.collider.GetComponent<ItemObject>();
-            WorldNote nota = hit.collider.GetComponent<WorldNote>();
-
-            if (item != null)
-            {
-                if (textoInteracao != null) 
-                {
-                    textoInteracao.text = "Pick up " + hit.collider.gameObject.name + " [F]";
-                    textoInteracao.gameObject.SetActive(true);
-                }
-
-                if (Keyboard.current.fKey.wasPressedThisFrame)
-                {
-                    item.SerApanhado();
-                    if (textoInteracao != null) textoInteracao.gameObject.SetActive(false);
-                }
-            }
-            else if (nota != null) 
-            {
-                if (textoInteracao != null) 
-                {
-                    textoInteracao.text = "Read " + hit.collider.gameObject.name + " [F]";
-                    textoInteracao.gameObject.SetActive(true);
-                }
-
-                if (Keyboard.current.fKey.wasPressedThisFrame)
-                {
-                    nota.LerNota();
-                    if (textoInteracao != null) textoInteracao.gameObject.SetActive(false);
-                }
-            }
-            else
-            {
-                if (textoInteracao != null) textoInteracao.gameObject.SetActive(false);
-            }
-        }
-        else
-        {
-            if (textoInteracao != null) textoInteracao.gameObject.SetActive(false);
-        }
-    }
-}*/
