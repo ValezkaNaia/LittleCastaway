@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31a811efa361a2247bfd34ca84ec2a58, type: 3}
+  m_Name: chicken_raw
+  m_EditorClassIdentifier: Assembly-CSharp::ItemData
+  itemName: chicken raw
+  itemIcon: {fileID: 21300000, guid: 447072c7a453d374b98415c2f28eaeaf, type: 3}
+  prefabModel: {fileID: 7677049683471479743, guid: 8e651e18f498c0244be314e63dd91170, type: 3}
+  isStackable: 1
+  isConsumable: 0
+  pontosRestauracao: 30
+  tipoConsumivel: 0
+  holdOffset: {x: 0, y: 0, z: 0}
+  holdRotation: {x: 0, y: 0, z: 0}
+  holdScale: {x: 0, y: 0, z: 0}

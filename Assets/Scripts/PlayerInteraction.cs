@@ -41,7 +41,7 @@ public class PlayerInteraction : MonoBehaviour
                 // Limpa o "(Clone)" e os espaços do nome que está na Hierarchy
                 string nomeDoItem = hit.collider.gameObject.name.Replace("(Clone)", "").Trim();
                 
-                DefinirTexto("Pick up " + nomeDoItem + " [F]");
+                DefinirTexto("Pick up " + item.referenciaItem.itemName + " [F]");
 
                 if (Keyboard.current.fKey.wasPressedThisFrame)
                 {
