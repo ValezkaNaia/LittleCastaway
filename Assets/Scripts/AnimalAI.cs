@@ -1,362 +1,268 @@
 using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
-using System.Collections;
-using UnityEngine.SceneManagement; // ADICIONADO: Para garantir a troca de cenas nativa do Unity
+using UnityEngine.AI;
+using UnityEngine.InputSystem; 
 
-public class SurvivalManager : MonoBehaviour
+[RequireComponent(typeof(NavMeshAgent))]
+public class AnimalAI : MonoBehaviour
 {
-    public static SurvivalManager instance; 
-
-    [Header("Elementos de UI - Barras")]
-    public Slider healthBar;
-    public Slider hungerBar;
-    public Slider thirstBar;
-    public Slider staminaBar; 
-    public GameObject staminaBarObject; 
-
-    [Header("Elementos de UI - Tempo")]
-    public TextMeshProUGUI dayText;
-    public TextMeshProUGUI timeText;
-
-    [Header("Ciclo Dia/Noite")]
-    public Transform sunTransform;
-
-    [Header("Estatísticas Máximas")]
-    public float maxHealth = 100f;
-    public float maxHunger = 100f;
-    public float maxThirst = 100f;
-    public float maxStamina = 100f;
-
-    private float currentHealth;
-    private float currentHunger;
-    private float currentThirst;
-    private float currentStamina;
-
-    [Header("Taxas (Fome/Sede)")]
-    public float hungerDepletionRate = 0.05f; 
-    public float thirstDepletionRate = 0.08f; 
-    [Tooltip("Velocidade com que perde vida quando a fome ou a sede batem no 0")]
-    public float starvationDamageRate = 0.5f; 
-
-    [Header("Mecânica de Stamina")]
-    public float staminaDrainRate = 25f;  
-    public float staminaRegenRate = 15f;  
-    public bool isExhausted = false;     
- 
-    [Header("Sistema de Tempo")] 
-    public float dayDurationInRealSeconds = 600f; 
-    public int maxDays = 5;
-    public float startHour = 8f;
-
-    [Header("Cenas de Fim de Jogo")] 
-    public string cenaVitoria = "WinScene";
-    public string cenaDerrota = "LoseScene";
-
-    [Header("Sistema de Fadiga e Sono")]
-    public CanvasGroup visaoTurvaOverlay; 
-    public GameObject painelEcraPreto; 
-    public TextMeshProUGUI textoSonoUI;
+    public enum Comportamento { Presa, Predador, Pet }
     
-    [Tooltip("Quantas horas IN-GAME o jogador aguenta sem dormir")]
-    public float horasParaDesmaiar = 36f; 
-    public float danoPorDesmaio = 20f;
+    [Header("Configurações Principais")]
+    public Comportamento tipoAnimal;
+    public float vida = 100f;
+    public float distanciaDetecao = 15f;
+    public bool darCarneAoMorrer = true;
 
-    private float currentFatigue = 0f;
-    public float currentTimeInGameHours; 
-    private int currentDay = 1;
-    private bool isGameFinished = false; 
-    private bool estaADormir = false; 
+    [Header("Combate (Ataque)")]
+    public float danoAtaque = 15f; 
+    public float tempoEntreAtaques = 2f; 
+    private float tempoDoUltimoAtaque = 0f;
 
-    private float lastHealth, lastHunger, lastThirst;
+    [Header("Pets (Cão e Gato)")]
+    public int macasDadas = 0;
+    private int macasParaDomesticar = 5;
+    public bool domesticado = false;
+    private bool provocado = false;
+    private AnimalAI alvoDoPet = null; 
 
-    void Awake() { if (instance == null) instance = this; }
+    [Header("Drop de Itens")]
+    public GameObject prefabCarneDoChao; 
+
+    [Header("Anti-Stuck System")]
+    public float timeToConsiderStuck = 3f; 
+    private float tempoEncravado = 0f;
+    private float tempoADesencravar = 0f; // Tempo que ele passa a caminhar para longe do obstáculo
+
+    private NavMeshAgent agente;
+    private Transform player;
 
     void Start()
     {
-        currentHealth = maxHealth;
-        currentHunger = maxHunger;
-        currentThirst = maxThirst;
-        currentStamina = maxStamina;
-        currentTimeInGameHours = startHour;
-
-        if (staminaBarObject != null) staminaBarObject.SetActive(false);
-        if (painelEcraPreto != null) painelEcraPreto.SetActive(false);
-        if (visaoTurvaOverlay != null) visaoTurvaOverlay.alpha = 0f;
-
-        ForçarAtualizacaoUI();
+        agente = GetComponent<NavMeshAgent>();
+        player = GameObject.FindGameObjectWithTag("Player").transform;
+        
+        InvokeRepeating("AndarAleatoriamente", Random.Range(0f, 2f), 5f);
     }
 
     void Update()
     {
-        if (isGameFinished || estaADormir || NoteManager.isReading) return;
+        if (vida <= 0 || player == null || !agente.isOnNavMesh) return;
 
-        HandleTime();
-        HandleStats();
-        HandleStamina();
-        HandleFatigue(); 
-    }
-
-    void HandleTime()
-    {
-        float inGameHoursPerRealSecond = 24f / dayDurationInRealSeconds;
-        AdicionarHorasLogicas(Time.deltaTime * inGameHoursPerRealSecond);
-    }
-
-    private void AdicionarHorasLogicas(float horas)
-    {
-        currentTimeInGameHours += horas;
-
-        if (currentTimeInGameHours >= 24f)
+        // --- SISTEMA ANTI-STUCK (SEM TELETRANSPORTES) ---
+        if (agente.hasPath && agente.remainingDistance > 0.5f)
         {
-            currentTimeInGameHours -= 24f; 
-            currentDay++;
-
-            // CONFIRMADO: Se passares do limite de dias, GANHAS!
-            if (currentDay > maxDays)
+            // Usa a velocidade real do Unity para saber se está a andar ou preso
+            if (agente.velocity.magnitude < 0.1f) 
             {
-                currentDay = maxDays;
-                currentTimeInGameHours = 0f; 
-                GanharJogo();
-                return; 
+                tempoEncravado += Time.deltaTime;
+                if (tempoEncravado >= timeToConsiderStuck)
+                {
+                    Desencravar(); 
+                }
             }
-        }
-
-        AtualizarVisualTempo();
-    }
-
-    void AtualizarVisualTempo()
-    {
-        if (sunTransform != null)
-        {
-            float sunRotationX = (currentTimeInGameHours / 24f) * 360f - 90f;
-            sunTransform.rotation = Quaternion.Euler(sunRotationX, 30f, 0f);
-        }
-
-        int hours = Mathf.FloorToInt(currentTimeInGameHours);
-        if (hours >= 24) hours = 0; 
-        int minutes = Mathf.FloorToInt((currentTimeInGameHours - hours) * 60);
-        
-        if (dayText != null) dayText.text = "Day " + currentDay;
-        if (timeText != null) timeText.text = string.Format("{0:00}:{1:00}", hours, minutes);
-    }
-
-    void HandleStats()
-    {
-        if (currentHunger > 0) currentHunger -= hungerDepletionRate * Time.deltaTime;
-        if (currentThirst > 0) currentThirst -= thirstDepletionRate * Time.deltaTime;
-
-        currentHunger = Mathf.Clamp(currentHunger, 0, maxHunger);
-        currentThirst = Mathf.Clamp(currentThirst, 0, maxThirst);
-
-        if (currentHunger <= 0 || currentThirst <= 0)
-        {
-            currentHealth -= starvationDamageRate * Time.deltaTime;
-            currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
-
-            if (currentHealth <= 0 && !isGameFinished)
+            else
             {
-                PerderJogo();
-            }
-        }
-
-        VerificarEAtualizarUI();
-    }
-
-    void HandleStamina()
-    {
-        bool isTryingToRun = Input.GetKey(KeyCode.LeftShift) && !isExhausted;
-
-        if (isTryingToRun)
-        {
-            currentStamina -= staminaDrainRate * Time.deltaTime;
-            if (currentStamina <= 0) { currentStamina = 0; isExhausted = true; }
-        }
-        else
-        {
-            currentStamina += staminaRegenRate * Time.deltaTime;
-            if (currentStamina >= 20f && isExhausted) isExhausted = false; 
-            if (currentStamina >= maxStamina) currentStamina = maxStamina;
-        }
-
-        if (staminaBar != null) staminaBar.value = currentStamina / maxStamina;
-
-        if (currentStamina == maxStamina && !Input.GetKey(KeyCode.LeftShift))
-        {
-            if (staminaBarObject != null && staminaBarObject.activeSelf) staminaBarObject.SetActive(false);
-        }
-        else
-        {
-            if (staminaBarObject != null && !staminaBarObject.activeSelf) staminaBarObject.SetActive(true);
-        }
-    }
-
-    void HandleFatigue()
-    {
-        float inGameHoursPerRealSecond = 24f / dayDurationInRealSeconds;
-        float horasPassadasNesteFrame = Time.deltaTime * inGameHoursPerRealSecond;
-
-        currentFatigue += (100f / horasParaDesmaiar) * horasPassadasNesteFrame;
-        currentFatigue = Mathf.Clamp(currentFatigue, 0f, 100f);
-
-        if (currentFatigue >= 70f)
-        {
-            if (visaoTurvaOverlay != null)
-            {
-                float progressoCansaco = (currentFatigue - 70f) / 30f;
-                visaoTurvaOverlay.alpha = progressoCansaco * 0.90f; 
+                tempoEncravado = 0f; 
             }
         }
         else
         {
-            if (visaoTurvaOverlay != null) visaoTurvaOverlay.alpha = 0f;
-        }
-
-        if (currentFatigue >= 100f) ForçarDesmaio();
-    }
-
-    private void ForçarDesmaio()
-    {
-        currentFatigue = 0f; 
-        if (textoSonoUI != null) textoSonoUI.text = "You were so exhausted that you passed out...";
-        StartCoroutine(RotinaSono(true));
-    }
-
-    private IEnumerator RotinaSono(bool foiForçado)
-    {
-        estaADormir = true;
-        CanvasGroup cg = null;
-        
-        if (painelEcraPreto != null) 
-        {
-            cg = painelEcraPreto.GetComponent<CanvasGroup>();
-            if (cg == null) cg = painelEcraPreto.AddComponent<CanvasGroup>();
-
-            painelEcraPreto.SetActive(true);
-            cg.alpha = 0f; 
-        }
-
-        float t = 0f;
-        while (t < 1.0f)
-        {
-            t += Time.deltaTime / 1.5f;
-            if (cg != null) cg.alpha = Mathf.Clamp01(t);
-            yield return null;
+            tempoEncravado = 0f;
         }
         
-        if (foiForçado) ReceberDano(danoPorDesmaio);
-
-        yield return new WaitForSecondsRealtime(3.0f);
-
-        AvancarTempo(8f);
-        ResetarCansaco();
-
-        t = 1f;
-        while (t > 0f)
+        // Se o animal estiver a tentar desentalar-se, ele ignora a IA normal por uns segundos
+        if (tempoADesencravar > 0)
         {
-            t -= Time.deltaTime / 2.0f;
-            if (cg != null) cg.alpha = Mathf.Clamp01(t);
-            yield return null;
+            tempoADesencravar -= Time.deltaTime;
+            return; 
+        }
+        // ------------------------------------------------
+
+        float distanciaProPlayer = Vector3.Distance(transform.position, player.position);
+
+        if (tipoAnimal == Comportamento.Pet && !domesticado && !provocado)
+        {
+            if (distanciaProPlayer <= 3f && Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
+            {
+                TentarDomesticar();
+            }
         }
 
-        if (painelEcraPreto != null) painelEcraPreto.SetActive(false);
-        estaADormir = false;
-    }
-
-    public void ResetarCansaco()
-    {
-        currentFatigue = 0f; 
-        if (visaoTurvaOverlay != null) visaoTurvaOverlay.alpha = 0f; 
-    }
-
-    public void DrinkWater(float amount) 
-    { 
-        currentThirst = Mathf.Clamp(currentThirst + amount, 0, maxThirst); 
-        ForçarAtualizacaoUI();
-    }
-    
-    public void EatFood(float amount) 
-    { 
-        currentHunger = Mathf.Clamp(currentHunger + amount, 0, maxHunger); 
-        ForçarAtualizacaoUI();
-    }
-
-    public void ReceberDano(float quantidade)
-    {
-        currentHealth -= quantidade;
-        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
-        ForçarAtualizacaoUI();
-        if (currentHealth <= 0 && !isGameFinished) PerderJogo();
-    }
-
-    public void ReceberNutricao(float quantidade, ItemData.TipoConsumivel tipo)
-    {
-        if (tipo == ItemData.TipoConsumivel.Comida)
+        if (domesticado)
         {
-            currentHunger = Mathf.Min(currentHunger + quantidade, maxHunger);
+            if (alvoDoPet != null && alvoDoPet.vida > 0)
+            {
+                float distParaAlvo = Vector3.Distance(transform.position, alvoDoPet.transform.position);
+                if (agente.isOnNavMesh) agente.SetDestination(alvoDoPet.transform.position);
+
+                if (distParaAlvo <= 2f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques)
+                {
+                    AtacarOutroAnimal(alvoDoPet);
+                }
+            }
+            else
+            {
+                alvoDoPet = null; 
+                if (distanciaProPlayer > 4f) 
+                {
+                    if (agente.isOnNavMesh) agente.SetDestination(player.position);
+                }
+            }
+            return;
         }
-        else if (tipo == ItemData.TipoConsumivel.Agua)
+
+        if (tipoAnimal == Comportamento.Presa)
         {
-            currentThirst = Mathf.Min(currentThirst + quantidade, maxThirst);
+            if (distanciaProPlayer < distanciaDetecao) FogirDoPlayer();
         }
-        ForçarAtualizacaoUI();
-    }
-
-    public void AvancarTempo(float horas) 
-    { 
-        AdicionarHorasLogicas(horas); 
-    }
-
-    void VerificarEAtualizarUI()
-    {
-        if (currentHealth != lastHealth || currentHunger != lastHunger || currentThirst != lastThirst)
-        {
-            ForçarAtualizacaoUI();
-        }
-    }
-
-    public void ForçarAtualizacaoUI()
-    {
-        if (healthBar != null) healthBar.value = currentHealth / maxHealth;
-        if (hungerBar != null) hungerBar.value = currentHunger / maxHunger;
-        if (thirstBar != null) thirstBar.value = currentThirst / maxThirst;
-
-        lastHealth = currentHealth;
-        lastHunger = currentHunger;
-        lastThirst = currentThirst;
-    }
-
-    // MODIFICADO: Sistema duplo de segurança para mudar de cena
-    private void GanharJogo()
-    {
-        isGameFinished = true;
-        PlayerPrefs.DeleteKey("CenaGuardada"); 
-        PlayerPrefs.Save();
         
-        if (SceneFader.instance != null)
+        else if (tipoAnimal == Comportamento.Predador)
         {
-            SceneFader.instance.FazerFadeEIrParaCena(cenaVitoria);
+            Transform alvoAtual = null;
+            float menorDistancia = distanciaDetecao;
+
+            if (distanciaProPlayer < menorDistancia)
+            {
+                alvoAtual = player;
+                menorDistancia = distanciaProPlayer;
+            }
+
+            AnimalAI[] todosAnimais = Object.FindObjectsByType<AnimalAI>(FindObjectsSortMode.None);
+            
+            foreach (AnimalAI outroAnimal in todosAnimais)
+            {
+                if (outroAnimal != this && outroAnimal.vida > 0 && 
+                    (outroAnimal.tipoAnimal == Comportamento.Presa || (outroAnimal.tipoAnimal == Comportamento.Pet && !outroAnimal.domesticado)))
+                {
+                    float distParaAnimal = Vector3.Distance(transform.position, outroAnimal.transform.position);
+                    if (distParaAnimal < menorDistancia)
+                    {
+                        alvoAtual = outroAnimal.transform;
+                        menorDistancia = distParaAnimal;
+                    }
+                }
+            }
+
+            if (alvoAtual != null)
+            {
+                if (agente.isOnNavMesh) agente.SetDestination(alvoAtual.position);
+                
+                if (menorDistancia <= 2f) 
+                {
+                    if (Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques)
+                    {
+                        if (alvoAtual == player) AtacarJogador();
+                        else AtacarOutroAnimal(alvoAtual.GetComponent<AnimalAI>());
+                    }
+                }
+            }
         }
-        else
+        
+        else if (tipoAnimal == Comportamento.Pet && provocado)
         {
-            SceneManager.LoadScene(cenaVitoria); // Fallback nativo se o fader não existir
+            if (distanciaProPlayer < distanciaDetecao)
+            {
+                if (agente.isOnNavMesh) agente.SetDestination(player.position);
+                if (distanciaProPlayer <= 2f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques)
+                {
+                    AtacarJogador();
+                }
+            }
         }
     }
 
-    // MODIFICADO: Sistema duplo de segurança para mudar de cena
-    private void PerderJogo()
+    void Desencravar()
     {
-        isGameFinished = true;
-        PlayerPrefs.DeleteKey("CenaGuardada");
-        PlayerPrefs.Save();
+        agente.ResetPath(); // Para de tentar empurrar a parede
         
-        if (SceneFader.instance != null)
+        // Escolhe uma direção aleatória em redor para se afastar
+        Vector3 randomDirection = Random.insideUnitSphere * 4f;
+        randomDirection += transform.position;
+        
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition(randomDirection, out hit, 4f, 1))
         {
-            SceneFader.instance.FazerFadeEIrParaCena(cenaDerrota);
+            agente.SetDestination(hit.position); // Camina normalmente para a nova direção
         }
-        else
+        
+        tempoEncravado = 0f; 
+        tempoADesencravar = 2f; // Dá-lhe 2 segundos para ele caminhar à vontade e desentalar-se sem o script o mandar voltar atrás
+    }
+
+    void AtacarJogador()
+    {
+        tempoDoUltimoAtaque = Time.time; 
+        if (SurvivalManager.instance != null) SurvivalManager.instance.ReceberDano(danoAtaque);
+        PedirAjudaAosPets(this);
+    }
+
+    void AtacarOutroAnimal(AnimalAI vitima)
+    {
+        if (vitima == null) return;
+        tempoDoUltimoAtaque = Time.time;
+        bool foiPredadorSelvagem = (tipoAnimal == Comportamento.Predador);
+        vitima.ReceberDano(danoAtaque, foiPredadorSelvagem); 
+    }
+
+    private void PedirAjudaAosPets(AnimalAI alvoAAtacar)
+    {
+        AnimalAI[] todosAnimais = Object.FindObjectsByType<AnimalAI>(FindObjectsSortMode.None);
+        
+        foreach (AnimalAI animal in todosAnimais)
         {
-            SceneManager.LoadScene(cenaDerrota); // Fallback nativo se o fader não existir
+            if (animal.tipoAnimal == Comportamento.Pet && animal.domesticado && animal.vida > 0)
+            {
+                animal.alvoDoPet = alvoAAtacar; 
+            }
+        }
+    }
+
+    void AndarAleatoriamente()
+    {
+        if (!agente.isOnNavMesh || domesticado || tempoADesencravar > 0) return;
+        if (tipoAnimal == Comportamento.Predador && Vector3.Distance(transform.position, player.position) < distanciaDetecao) return;
+
+        Vector3 direcaoAleatoria = Random.insideUnitSphere * 10f;
+        direcaoAleatoria += transform.position;
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition(direcaoAleatoria, out hit, 10f, 1))
+        {
+            agente.SetDestination(hit.position);
+        }
+    }
+
+    void FogirDoPlayer()
+    {
+        if (!agente.isOnNavMesh || tempoADesencravar > 0) return;
+        Vector3 direcaoFuga = transform.position - player.position;
+        Vector3 novaPosicao = transform.position + direcaoFuga.normalized * 10f;
+        agente.SetDestination(novaPosicao);
+    }
+
+    public void ReceberDano(float dano, bool porPredador = false)
+    {
+        vida -= dano;
+        if (tipoAnimal == Comportamento.Pet && !domesticado) provocado = true; 
+        if (!porPredador && tipoAnimal != Comportamento.Pet) PedirAjudaAosPets(this);
+        if (vida <= 0) Morrer(porPredador);
+    }
+
+    void Morrer(bool porPredador)
+    {
+        if (darCarneAoMorrer && tipoAnimal != Comportamento.Pet && !porPredador)
+        {
+            if (prefabCarneDoChao != null) Instantiate(prefabCarneDoChao, transform.position + Vector3.up, Quaternion.identity);
+        }
+        Destroy(gameObject);
+    }
+
+    public void TentarDomesticar()
+    {
+        if (tipoAnimal != Comportamento.Pet || domesticado || provocado) return;
+        macasDadas++;
+        if (macasDadas >= macasParaDomesticar) 
+        {
+            domesticado = true;
         }
     }
 }

@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections;
-using UnityEngine.SceneManagement; // ADICIONADO: Para garantir a troca de cenas nativa do Unity
+using UnityEngine.SceneManagement; 
 
 public class SurvivalManager : MonoBehaviour
 {
@@ -27,11 +27,6 @@ public class SurvivalManager : MonoBehaviour
     public float maxHunger = 100f;
     public float maxThirst = 100f;
     public float maxStamina = 100f;
-
-    private float currentHealth;
-    private float currentHunger;
-    private float currentThirst;
-    private float currentStamina;
 
     [Header("Taxas (Fome/Sede)")]
     public float hungerDepletionRate = 0.05f; 
@@ -62,12 +57,15 @@ public class SurvivalManager : MonoBehaviour
     public float horasParaDesmaiar = 36f; 
     public float danoPorDesmaio = 20f;
 
+    private float currentHealth;
+    private float currentHunger;
+    private float currentThirst;
+    private float currentStamina;
     private float currentFatigue = 0f;
     public float currentTimeInGameHours; 
     private int currentDay = 1;
     private bool isGameFinished = false; 
     private bool estaADormir = false; 
-
     private float lastHealth, lastHunger, lastThirst;
 
     void Awake() { if (instance == null) instance = this; }
@@ -112,7 +110,6 @@ public class SurvivalManager : MonoBehaviour
             currentTimeInGameHours -= 24f; 
             currentDay++;
 
-            // CONFIRMADO: Se passares do limite de dias, GANHAS!
             if (currentDay > maxDays)
             {
                 currentDay = maxDays;
@@ -326,7 +323,6 @@ public class SurvivalManager : MonoBehaviour
         lastThirst = currentThirst;
     }
 
-    // MODIFICADO: Sistema duplo de segurança para mudar de cena
     private void GanharJogo()
     {
         isGameFinished = true;
@@ -339,11 +335,10 @@ public class SurvivalManager : MonoBehaviour
         }
         else
         {
-            SceneManager.LoadScene(cenaVitoria); // Fallback nativo se o fader não existir
+            SceneManager.LoadScene(cenaVitoria); 
         }
     }
 
-    // MODIFICADO: Sistema duplo de segurança para mudar de cena
     private void PerderJogo()
     {
         isGameFinished = true;
@@ -356,7 +351,7 @@ public class SurvivalManager : MonoBehaviour
         }
         else
         {
-            SceneManager.LoadScene(cenaDerrota); // Fallback nativo se o fader não existir
+            SceneManager.LoadScene(cenaDerrota); 
         }
     }
 }
