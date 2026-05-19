@@ -68,7 +68,7 @@ public class PlayerInteraction : MonoBehaviour
             }
 
             // =================================================================
-            // 3. ATACAR ANIMAIS COM A LANÇA
+            // 3. INTERAÇÃO COM ANIMAIS (ATACAR OU DOMESTICAR)
             // =================================================================
             else if (hit.collider.CompareTag("Animal"))
             {
@@ -76,20 +76,33 @@ public class PlayerInteraction : MonoBehaviour
                 if (animal != null && animal.vida > 0)
                 {
                     olhouParaAlgoInterativo = true;
-                    FerramentaAtaque armaEquipada = GetComponentInChildren<FerramentaAtaque>();
 
-                    if (armaEquipada != null && armaEquipada.ehLanca)
+                    // Verifica se é um animal de estimação (cão/gato)
+                    if (animal.tipoAnimal == AnimalAI.Comportamento.Pet && !animal.domesticado)
                     {
-                        DefinirTexto("Press [E] to Attack with Spear");
-                        if (Keyboard.current.eKey.wasPressedThisFrame)
-                        {
-                            armaEquipada.JogarAnimacaoGatilho();
-                            animal.ReceberDano(danoLanca);
-                        }
+                        DefinirTexto("Press [F] to Give Apple");
                     }
-                    else
+                    else if (animal.tipoAnimal == AnimalAI.Comportamento.Pet && animal.domesticado)
                     {
-                        DefinirTexto("You need to equip a Spear!");
+                        DefinirTexto("Loyal Companion");
+                    }
+                    else // Se for predador ou presa normal, usa o sistema da Lança
+                    {
+                        FerramentaAtaque armaEquipada = GetComponentInChildren<FerramentaAtaque>();
+
+                        if (armaEquipada != null && armaEquipada.ehLanca)
+                        {
+                            DefinirTexto("Press [E] to Attack with Spear");
+                            if (Keyboard.current.eKey.wasPressedThisFrame)
+                            {
+                                armaEquipada.JogarAnimacaoGatilho();
+                                animal.ReceberDano(danoLanca);
+                            }
+                        }
+                        else
+                        {
+                            DefinirTexto("You need to equip a Spear!");
+                        }
                     }
                 }
             }
