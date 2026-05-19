@@ -14,8 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemData
   itemName: axe
   itemIcon: {fileID: 21300000, guid: 62ddcfc61f048264ab6d3f7ca9e8f5c8, type: 3}
-  prefabModel: {fileID: 919132149155446097, guid: 252b74a90f21d0740b8b979c16188107, type: 3}
+  prefabModel: {fileID: 4098340380049956745, guid: 99f06f5819599004ebb65899962dd965, type: 3}
   isStackable: 0
+  isConsumable: 0
+  pontosRestauracao: 0
+  tipoConsumivel: 0
   holdOffset: {x: 0, y: 0, z: 0}
   holdRotation: {x: 0, y: 0, z: 0}
   holdScale: {x: 0, y: 0, z: 0}

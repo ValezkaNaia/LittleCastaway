@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: babbae846fab7d94dad092d1581a89f8, type: 3}
+  m_Name: Spear
+  m_EditorClassIdentifier: Assembly-CSharp::RecipeData
+  nomeReceita: Spear
+  ingredientesRequired:
+  - item: {fileID: 11400000, guid: 4c120381ba7aa35438e770a80c4a0abd, type: 2}
+    quantidade: 1
+  - item: {fileID: 11400000, guid: c60c3162e7b09e8409addeaaeb7de313, type: 2}
+    quantidade: 2
+  itemResultado: {fileID: 11400000, guid: 32ee0a05872bf884fa234f52ec63a6db, type: 2}
+  quantidadeResultado: 1

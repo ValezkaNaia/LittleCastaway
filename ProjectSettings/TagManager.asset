@@ -6,6 +6,9 @@ TagManager:
   tags:
   - CinemachineTarget
   - Animal
+  - FxTemporaire
+  - ArvoreMadeira
+  - ArvoreFruta
   layers:
   - Default
   - TransparentFX

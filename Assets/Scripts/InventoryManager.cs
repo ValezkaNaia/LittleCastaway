@@ -22,34 +22,90 @@ public class InventoryManager : MonoBehaviour
 
     public void AddItem(ItemData newItem)
     {
-        // 1. Se o item for acumulável, procura se já existe um igual na lista
         if (newItem.isStackable)
         {
             foreach (var slotLogico in items)
             {
                 if (slotLogico.item == newItem)
                 {
-                    slotLogico.quantidade += 1; // Soma +1 à quantidade existente
-                    FinalizarAdicao(newItem);
-                    return; // Para o código aqui porque já resolveu!
+                    slotLogico.quantidade += 1;
+                    FinalizarAdicao(newItem, false); // false = NÃO vai para a hotbar
+                    return;
                 }
             }
         }
 
-        // 2. Se não for acumulável ou for o primeiro deste tipo, adiciona uma nova entrada na lista
         items.Add(new ItemAcumulado(newItem, 1));
-        FinalizarAdicao(newItem);
+        FinalizarAdicao(newItem, false); // false = NÃO vai para a hotbar
     }
 
-    private void FinalizarAdicao(ItemData newItem)
+    public void RemoveItem(ItemData itemToRemove)
     {
-        Debug.Log("Apanhaste: " + newItem.itemName);
+        if (itemToRemove == null) return;
 
-        // Notifica a hotbar para mostrar o item na barra de acesso rápido
-        if (HotbarManager.instance != null)
+        // Procura o item na lista lógica
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i].item == itemToRemove)
+            {
+                // Se for acumulável, diminui 1 à quantidade
+                if (itemToRemove.isStackable)
+                {
+                    items[i].quantidade -= 1;
+                    
+                    // Se a quantidade chegou a 0, remove completamente a entrada da lista
+                    if (items[i].quantidade <= 0)
+                    {
+                        items.RemoveAt(i);
+                    }
+                }
+                else
+                {
+                    // Se não for acumulável, remove diretamente da lista
+                    items.RemoveAt(i);
+                }
+
+                Debug.Log("Item removido do inventário geral: " + itemToRemove.itemName);
+                break;
+            }
+        }
+
+        // Atualiza visualmente a interface do inventário geral
+        InventoryUI ui = Object.FindFirstObjectByType<InventoryUI>();
+        if (ui != null) ui.AtualizarUI();
+    }
+
+    // NOVA FUNÇÃO: Usada para devolver itens de menus (Crafting, Baús, etc.) sem poluir a Hotbar
+    public void AddItemDoMenu(ItemData newItem)
+    {
+        if (newItem.isStackable)
+        {
+            foreach (var slotLogico in items)
+            {
+                if (slotLogico.item == newItem)
+                {
+                    slotLogico.quantidade += 1;
+                    FinalizarAdicao(newItem, false); // false = NÃO vai para a hotbar
+                    return;
+                }
+            }
+        }
+
+        items.Add(new ItemAcumulado(newItem, 1));
+        FinalizarAdicao(newItem, false); // false = NÃO vai para a hotbar
+    }
+
+    // Alterado para receber o booleano 'enviarParaHotbar'
+    private void FinalizarAdicao(ItemData newItem, bool enviarParaHotbar)
+    {
+        Debug.Log("Inventário Geral Atualizado: " + newItem.itemName);
+
+        // Só envia para a hotbar se o item veio do CHÃO (apanhado no mundo)
+        if (enviarParaHotbar && HotbarManager.instance != null)
+        {
             HotbarManager.instance.AdicionarItem(newItem);
+        }
 
-        // ATUALIZAÇÃO VISUAL: Notifica a UI do Inventário para se redesenhar
         InventoryUI ui = Object.FindFirstObjectByType<InventoryUI>();
         if (ui != null) ui.AtualizarUI();
     }

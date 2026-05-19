@@ -23,6 +23,9 @@ public class AnimalAI : MonoBehaviour
     public bool domesticado = false;
     private bool provocado = false;
 
+    [Header("Drop de Itens")]
+    public GameObject prefabCarneDoChao; // O item 3D da carne que vai rolar no chão
+
     private NavMeshAgent agente;
     private Transform player;
 
@@ -116,11 +119,27 @@ public class AnimalAI : MonoBehaviour
     {
         if (darCarneAoMorrer && tipoAnimal != Comportamento.Pet)
         {
-            Debug.Log(gameObject.name + " morreu e vai dropar carne!");
+            Debug.Log(gameObject.name + " morreu e dropou carne!");
+            
+            // Cria a carne na posição onde o animal morreu
+            if (prefabCarneDoChao != null)
+            {
+                Instantiate(prefabCarneDoChao, transform.position + Vector3.up, Quaternion.identity);
+            }
         }
         
         Destroy(gameObject);
     }
+
+    /*void Morrer()
+    {
+        if (darCarneAoMorrer && tipoAnimal != Comportamento.Pet)
+        {
+            Debug.Log(gameObject.name + " morreu e vai dropar carne!");
+        }
+        
+        Destroy(gameObject);
+    }*/
 
     public void TentarDomesticar()
     {

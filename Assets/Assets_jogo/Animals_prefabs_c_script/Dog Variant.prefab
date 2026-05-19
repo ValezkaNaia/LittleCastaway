@@ -114,3 +114,4 @@ MonoBehaviour:
   tempoEntreAtaques: 2
   macasDadas: 5
   domesticado: 1
+  prefabCarneDoChao: {fileID: 0}

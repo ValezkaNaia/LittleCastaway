@@ -72,7 +72,7 @@ public class MesaCraftingManager : MonoBehaviour
 
         if (item != null)
         {
-            inventory.AddItem(item); // Devolve 1 item ao inventário
+            inventory.AddItemDoMenu(item); // Devolve sem mandar para a hotbar
             
             int novaQtd = slot.GetQuantity() - 1;
             if (novaQtd <= 0)
@@ -177,6 +177,48 @@ public class MesaCraftingManager : MonoBehaviour
             inventory.AddItem(receitaAtiva.itemResultado);
         }
 
+        // 2. AVISA A HOTBAR E LIMPA OS SLOTS UTILIZADOS NA MESA DE CRAFTING
+        foreach (var slot in slotsIngredientes)
+        {
+            ItemData ingredienteConsumido = slot.GetItem();
+
+            // Se o slot tinha um item válido, avisa o HotbarManager para o remover caso estivesse equipado
+            if (ingredienteConsumido != null && HotbarManager.instance != null)
+            {
+                HotbarManager.instance.RemoverItemGasto(ingredienteConsumido);
+            }
+
+            // Agora sim, limpa o slot da mesa com segurança
+            slot.ClearSlot();
+        }
+        
+        slotResultado.ClearSlot();
+        botaoCraftear.interactable = false;
+
+        // 3. ATUALIZAÇÃO VISUAL OBRIGATÓRIA DOS DOIS LADOS: 
+        InventoryUI invUI = Object.FindFirstObjectByType<InventoryUI>();
+        if (invUI != null) 
+        {
+            invUI.AtualizarUI();
+        }
+
+        receitaAtiva = null;
+        
+        Debug.Log("Item fabricado com sucesso e adicionado ao inventário!");
+    }
+
+  /*void ExecutarCrafting()
+    {
+        if (receitaAtiva == null) return;
+
+        Debug.Log("A tentar fabricar o item: " + receitaAtiva.itemResultado.itemName);
+
+        // 1. Adiciona o resultado respeitando a quantidade configurada na receita
+        for (int i = 0; i < receitaAtiva.quantidadeResultado; i++)
+        {
+            inventory.AddItem(receitaAtiva.itemResultado);
+        }
+
         // 2. Limpa os slots utilizados na mesa de crafting
         foreach (var slot in slotsIngredientes)
         {
@@ -184,6 +226,7 @@ public class MesaCraftingManager : MonoBehaviour
         }
         slotResultado.ClearSlot();
         botaoCraftear.interactable = false;
+
 
         // 3. ATUALIZAÇÃO VISUAL OBRIGATÓRIA DOS DOIS LADOS:
         // Atualiza a UI do inventário principal para mostrar o novo Machado e remover as madeiras
@@ -196,31 +239,9 @@ public class MesaCraftingManager : MonoBehaviour
         receitaAtiva = null;
         
         Debug.Log("Item fabricado com sucesso e adicionado ao inventário!");
-    }
-
-    /*void ExecutarCrafting()
-    {
-        if (receitaAtiva == null) return;
-
-        // Adiciona o resultado respeitando a quantidade configurada na receita
-        for (int i = 0; i < receitaAtiva.quantidadeResultado; i++)
-        {
-            inventory.AddItem(receitaAtiva.itemResultado);
-        }
-
-        // Limpa os slots utilizados na mesa
-        foreach (var slot in slotsIngredientes)
-        {
-            slot.ClearSlot();
-        }
-        slotResultado.ClearSlot();
-        botaoCraftear.interactable = false;
-
-        Object.FindFirstObjectByType<InventoryUI>().AtualizarUI();
-        receitaAtiva = null;
-        
-        Debug.Log("Item fabricado com sucesso!");
     }*/
+
+    
     
     // Funções para ligar à abertura automática do painel
     public void AbrirMesa() => craftingPanel.SetActive(true);
@@ -233,7 +254,7 @@ public class MesaCraftingManager : MonoBehaviour
             {
                 for (int i = 0; i < slot.GetQuantity(); i++)
                 {
-                    inventory.AddItem(slot.GetItem());
+                    inventory.AddItemDoMenu(slot.GetItem()); // Devolve sem mandar para a hotbar
                 }
                 slot.ClearSlot();
             }
@@ -241,4 +262,6 @@ public class MesaCraftingManager : MonoBehaviour
         slotResultado.ClearSlot();
         craftingPanel.SetActive(false);
     }
+
+    
 }

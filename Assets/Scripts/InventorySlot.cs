@@ -43,6 +43,12 @@ public class InventorySlot : MonoBehaviour
         }
     }
 
+    // Função necessária para que o sistema de Drag and Drop da Hotbar saiba que item está neste slot
+    public ItemData GetItem()
+    {
+        return itemNoSlot;
+    }
+
     public void ClicouNoSlot()
     {
         if (itemNoSlot != null && MesaCraftingManager.instance != null)
