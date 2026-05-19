@@ -6,6 +6,8 @@ public class PlayerInteraction : MonoBehaviour
 {
     [Header("Configurações Globais")]
     public float interactionRange = 5f;
+    // NOVO: Aumenta a "grossura" do laser. 0.5f é um bom valor para não precisar mirar exato no centro.
+    public float interactionRadius = 0.5f; 
     public TextMeshProUGUI textoInteracao;
     public float danoLanca = 35f;
 
@@ -21,26 +23,28 @@ public class PlayerInteraction : MonoBehaviour
         // Se estiveres a ler uma nota, bloqueia a interação com outras coisas
         if (NoteManager.isReading) return;
 
-        Ray ray = new Ray(cam.position, cam.forward);
+        // Define a origem e direção baseadas na câmera
+        Vector3 rayOrigin = cam.position;
+        Vector3 rayDirection = cam.forward;
         RaycastHit hit;
 
-        Debug.DrawRay(cam.position, cam.forward * interactionRange, Color.red);
+        // Visualização do laser no Editor (Raio vermelho fino no centro)
+        Debug.DrawRay(rayOrigin, rayDirection * interactionRange, Color.red);
 
         bool olhouParaAlgoInterativo = false;
 
-        if (Physics.Raycast(ray, out hit, interactionRange))
+        // MUDANÇA: Usamos SphereCast em vez de Raycast para criar um volume de detetor maior
+        if (Physics.SphereCast(rayOrigin, interactionRadius, rayDirection, out hit, interactionRange))
         {
             // =================================================================
             // 1. APANHAR ITENS DO CHÃO
             // =================================================================
             ItemObject item = hit.collider.GetComponent<ItemObject>();
-            if (item != null)
+            // Nota: Com SphereCast, às vezes detetamos o colisor do chão se o raio for muito grande. 
+            // É boa prática verificar se o objeto detetado não é o próprio jogador.
+            if (item != null && hit.collider.gameObject != gameObject)
             {
                 olhouParaAlgoInterativo = true;
-                
-                // Limpa o "(Clone)" e os espaços do nome que está na Hierarchy
-                string nomeDoItem = hit.collider.gameObject.name.Replace("(Clone)", "").Trim();
-                
                 DefinirTexto("Pick up " + item.referenciaItem.itemName + " [F]");
 
                 if (Keyboard.current.fKey.wasPressedThisFrame)
@@ -57,7 +61,6 @@ public class PlayerInteraction : MonoBehaviour
             {
                 WorldNote nota = hit.collider.GetComponent<WorldNote>();
                 olhouParaAlgoInterativo = true;
-                
                 DefinirTexto("Read Note [F]");
 
                 if (Keyboard.current.fKey.wasPressedThisFrame)
@@ -77,16 +80,23 @@ public class PlayerInteraction : MonoBehaviour
                 {
                     olhouParaAlgoInterativo = true;
 
-                    // Verifica se é um animal de estimação (cão/gato)
-                    if (animal.tipoAnimal == AnimalAI.Comportamento.Pet && !animal.domesticado)
+                    // Sistema de domesticação individual (Correção do bug anterior)
+                    if (animal.tipoAnimal == AnimalAI.Comportamento.Pet && !animal.domesticado && !animal.provocado)
                     {
-                        DefinirTexto("Press [F] to Give Apple");
+                        // Feedback dinâmico em Inglês
+                        int applesLeft = 5 - animal.macasDadas;
+                        DefinirTexto("Press [F] to Give Apple (" + applesLeft + " more needed)");
+
+                        if (Keyboard.current.fKey.wasPressedThisFrame)
+                        {
+                            animal.TentarDomesticar();
+                        }
                     }
                     else if (animal.tipoAnimal == AnimalAI.Comportamento.Pet && animal.domesticado)
                     {
                         DefinirTexto("Loyal Companion");
                     }
-                    else // Se for predador ou presa normal, usa o sistema da Lança
+                    else // Predador ou Presa normal
                     {
                         FerramentaAtaque armaEquipada = GetComponentInChildren<FerramentaAtaque>();
 
@@ -186,6 +196,18 @@ public class PlayerInteraction : MonoBehaviour
         if (textoInteracao != null)
         {
             textoInteracao.gameObject.SetActive(false);
+        }
+    }
+
+    // Opcional: Desenha a esfera do SphereCast no Editor para te ajudar a ajustar o tamanho
+    void OnDrawGizmosSelected()
+    {
+        if (cam != null)
+        {
+            Gizmos.color = Color.yellow;
+            Vector3 endPosition = cam.position + cam.forward * interactionRange;
+            Gizmos.DrawLine(cam.position, endPosition);
+            Gizmos.DrawWireSphere(endPosition, interactionRadius);
         }
     }
 }

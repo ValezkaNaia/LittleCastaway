@@ -113,7 +113,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AnimalAI
   tipoAnimal: 1
   vida: 120
-  distanciaDetecao: 40
+  distanciaDetecao: 30
   darCarneAoMorrer: 1
   danoAtaque: 20
   tempoEntreAtaques: 1.5
