@@ -31,9 +31,7 @@ public class SurvivalManager : MonoBehaviour
     [Header("Taxas (Fome/Sede/Cura)")]
     public float hungerDepletionRate = 0.05f; 
     public float thirstDepletionRate = 0.08f; 
-    [Tooltip("Velocidade com que perde vida quando a fome ou a sede batem no 0")]
-    public float starvationDamageRate = 1.0f; // Aumentei um pouco para ser mais notório o piscar
-    [Tooltip("Velocidade com que a vida regenera (por segundo) quando a fome e sede estão acima de 90%")]
+    public float starvationDamageRate = 1.0f; 
     public float healthRegenRate = 0.3f;
 
     [Header("Mecânica de Stamina")]
@@ -56,10 +54,21 @@ public class SurvivalManager : MonoBehaviour
     public float horasParaDesmaiar = 36f; 
     public float danoPorDesmaio = 20f;
 
+    [Header("Sistema de Afogamento")]
+    [Tooltip("Abaixo de que altura (Y) a CABEÇA (Câmara) tem de estar para afogar?")]
+    public float alturaDoMar = 2f; 
+    public float tempoSeguroNaAgua = 10f; 
+    public float danoPorGole = 20f;   
+    public float intervaloEntreDanos = 2f; 
+    
+    // Contadores invisíveis de água
+    private float tempoNaAgua = 0f;
+    private float cronometroDano = 0f;
+
     [Header("Efeitos Visuais e Câmara")]
-    public Image imagemDanoTela; // Vinagrete Vermelho
-    public Image visaoVerdeImage; // Vinagrete Verde
-    public Image visaoSonoImage; // Vinagrete de Sono
+    public Image imagemDanoTela; 
+    public Image visaoVerdeImage; 
+    public Image visaoSonoImage; 
     public Camera mainCamera; 
 
     private float currentHealth;
@@ -73,12 +82,9 @@ public class SurvivalManager : MonoBehaviour
     private bool estaADormir = false; 
     private float lastHealth, lastHunger, lastThirst;
 
-    // Variáveis para o coice da lente (Dano/Sono)
     private float baseFOV;
     private float shakeIntensity = 0f;
     private float shakeDecay = 0f;
-
-    // Variável para controlar o tempo entre "piscadelas" vermelhas da fome (para não ser uma luz estroboscópica)
     private float tempoUltimoDanoFome;
 
     void Awake() { if (instance == null) instance = this; }
@@ -94,7 +100,6 @@ public class SurvivalManager : MonoBehaviour
         if (staminaBarObject != null) staminaBarObject.SetActive(false);
         if (painelEcraPreto != null) painelEcraPreto.SetActive(false);
         
-        // Inicializa todas as imagens de efeito com Alpha 0 (invisíveis)
         SetImageAlpha(imagemDanoTela, 0f);
         SetImageAlpha(visaoVerdeImage, 0f);
         SetImageAlpha(visaoSonoImage, 0f);
@@ -115,6 +120,7 @@ public class SurvivalManager : MonoBehaviour
         HandleStats();
         HandleStamina();
         HandleFatigue(); 
+        HandleDrowning(); // Adicionámos o afogamento aqui!
         HandleFOVEffects();
     }
 
@@ -129,10 +135,8 @@ public class SurvivalManager : MonoBehaviour
     }
 
     // =================================================================
-    // GESTÃO CENTRALIZADA DE SAÚDE (DANO E CURA)
+    // SISTEMA DE DANO E CURA
     // =================================================================
-
-    // NOVA FUNÇÃO: Centraliza a perda de vida e aciona os efeitos visuais
     private void DeduzirVida(float quantidade, bool usarEfeitosVisuais, float forcaEfeito = 1.0f)
     {
         if (currentHealth <= 0 || isGameFinished) return;
@@ -150,13 +154,46 @@ public class SurvivalManager : MonoBehaviour
         if (currentHealth <= 0) PerderJogo();
     }
 
-    // Mantemos esta função pública para os scripts dos Animais chamarem
     public void ReceberDano(float quantidade)
     {
-        // Ataque de animal: Dano instantâneo, efeito visual forte (força 1.0)
         DeduzirVida(quantidade, true, 1.0f);
     }
 
+    // =================================================================
+    // AFOGAMENTO (Controlado pela Cabeça / Câmara)
+    // =================================================================
+    void HandleDrowning()
+    {
+        if (mainCamera == null) return;
+
+        // Se a CÂMARA descer abaixo do nível do mar, começa a sufocar
+        if (mainCamera.transform.position.y <= alturaDoMar)
+        {
+            tempoNaAgua += Time.deltaTime;
+
+            if (tempoNaAgua >= tempoSeguroNaAgua)
+            {
+                cronometroDano += Time.deltaTime;
+
+                if (cronometroDano >= intervaloEntreDanos)
+                {
+                    // Tira vida, abana a câmara forte e pisca o sangue!
+                    DeduzirVida(danoPorGole, true, 1.2f);
+                    cronometroDano = 0f;
+                }
+            }
+        }
+        else
+        {
+            // Tirou a cabeça da água, respira fundo!
+            tempoNaAgua = 0f;
+            cronometroDano = 0f;
+        }
+    }
+
+    // =================================================================
+    // RESTANTES MÉTODOS
+    // =================================================================
     void HandleStats()
     {
         if (currentHunger > 0) currentHunger -= hungerDepletionRate * Time.deltaTime;
@@ -167,23 +204,17 @@ public class SurvivalManager : MonoBehaviour
 
         float targetGreenAlpha = 0f;
 
-        // --- SISTEMA DE DANO POR ESTREMA FOME/SEDE (CORRIGIDO) ---
         if (currentHunger <= 0 || currentThirst <= 0)
         {
-            // Calcula o dano deste frame
             float danoFomeSede = starvationDamageRate * Time.deltaTime;
-            
-            // Tira vida, mas SEM abanar a câmara (shake), apenas piscar o vermelho suavemente
             DeduzirVida(danoFomeSede, false); 
 
-            // Para o piscar vermelho não ser constante (frame a frame), fazemos piscar a cada 1 segundo enquanto morre de fome
             if (Time.time >= tempoUltimoDanoFome + 1.0f)
             {
-                if (imagemDanoTela != null) StartCoroutine(PiscarSangue(0.3f)); // Alpha mais suave (0.3) para fome
+                if (imagemDanoTela != null) StartCoroutine(PiscarSangue(0.3f)); 
                 tempoUltimoDanoFome = Time.time;
             }
         }
-        // --- SISTEMA DE REGENERAÇÃO (FOME E SEDE > 90%) ---
         else if (currentHunger >= (maxHunger * 0.9f) && currentThirst >= (maxThirst * 0.9f))
         {
             if (currentHealth < maxHealth)
@@ -194,7 +225,6 @@ public class SurvivalManager : MonoBehaviour
             }
         }
 
-        // Atualização suave do vinagrete verde
         if (visaoVerdeImage != null)
         {
             Color currentGreenColor = visaoVerdeImage.color;
@@ -204,10 +234,6 @@ public class SurvivalManager : MonoBehaviour
 
         VerificarEAtualizarUI();
     }
-
-    // =================================================================
-    // RESTANTES MÉTODOS ORIGINAIS (Inalterados)
-    // =================================================================
 
     void HandleFOVEffects()
     {
@@ -231,14 +257,9 @@ public class SurvivalManager : MonoBehaviour
     {
         shakeIntensity = forca;
         shakeDecay = forca / duracao;
-
-        if (imagemDanoTela != null)
-        {
-            StartCoroutine(PiscarSangue(0.6f)); // Alpha normal de dano (0.6)
-        }
+        if (imagemDanoTela != null) StartCoroutine(PiscarSangue(0.6f)); 
     }
 
-    // Atualizado para aceitar opacidade máxima variável
     System.Collections.IEnumerator PiscarSangue(float alphaMaximo)
     {
         Color corSangue = imagemDanoTela.color;
@@ -327,10 +348,8 @@ public class SurvivalManager : MonoBehaviour
             float progressoCansaco = (currentFatigue - 70f) / 30f;
             SetImageAlpha(visaoSonoImage, progressoCansaco * 0.90f);
         }
-        else
-        {
-            SetImageAlpha(visaoSonoImage, 0f);
-        }
+        else SetImageAlpha(visaoSonoImage, 0f);
+        
         if (currentFatigue >= 100f) ForçarDesmaio();
     }
 
@@ -359,7 +378,7 @@ public class SurvivalManager : MonoBehaviour
             if (cg != null) cg.alpha = Mathf.Clamp01(t);
             yield return null;
         }
-        if (foiForçado) DeduzirVida(danoPorDesmaio, true, 0.5f); // Desmaio pisca vermelho com força média
+        if (foiForçado) DeduzirVida(danoPorDesmaio, true, 0.5f); 
         yield return new WaitForSecondsRealtime(3.0f);
         AvancarTempo(8f);
         ResetarCansaco();
