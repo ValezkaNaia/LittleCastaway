@@ -120,7 +120,7 @@ MonoBehaviour:
   macasDadas: 0
   domesticado: 0
   provocado: 0
-  prefabCarneDoChao: {fileID: 7893667134745137302, guid: dae57aea7aee8914da3ecfa4dc3e092d, type: 3}
+  prefabCarneDoChao: {fileID: 3872576327743985497, guid: cbb35c4a40e18bc41ab83409438d7446, type: 3}
   timeToConsiderStuck: 3
 --- !u!65 &5863626163663166652
 BoxCollider:

@@ -49,6 +49,12 @@ public class HotbarManager : MonoBehaviour
         {
             TentarConsumirItem();
         }
+
+        // NOVO: Clique esquerdo do rato para colocar objetos como a Fogueira no chão
+        if (Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            TentarColocarObjetoNoChao();
+        }
     }
 
     void LerInput()
@@ -207,6 +213,61 @@ public class HotbarManager : MonoBehaviour
         foreach (var col in modeloEquipado.GetComponentsInChildren<Collider>()) col.enabled = false;
         var io = modeloEquipado.GetComponent<ItemObject>();
         if (io != null) Destroy(io);
+    }
+
+    // NOVA FUNÇÃO: Trata a colocação da fogueira no mundo real
+    void TentarColocarObjetoNoChao()
+    {
+        ItemData itemAtivo = GetItemSelecionado();
+        
+        // Só avança se o item na mão existir, for colocável e tiver um modelo de mundo configurado
+        if (itemAtivo == null || !itemAtivo.isPlaceable || itemAtivo.prefabModel == null) return;
+
+        Camera cameraPrincipal = Camera.main;
+        if (cameraPrincipal == null) return;
+
+        // Lança um raio do centro da tela para a frente (distância máxima de 5 metros)
+        Ray raio = cameraPrincipal.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+        RaycastHit hit;
+
+        // Define a distância limite que o jogador consegue esticar os braços para construir
+        float distanciaColocacao = 5f; 
+
+        // Faz o raio colidir apenas com colisores físicos (podes criar uma Layer do chão se preferires)
+        if (Physics.Raycast(raio, out hit, distanciaColocacao))
+        {
+            // 1. Instancia o Prefab real no chão na posição onde o raio tocou
+            Quaternion rotacaoAlinhada = Quaternion.FromToRotation(Vector3.up, hit.normal);
+            GameObject novoObjetoMundo = Instantiate(itemAtivo.prefabModel, hit.point, rotacaoAlinhada);
+
+            // Reativa os componentes que desativamos para a mão (Garante que a fogueira do chão tem colisor físico)
+            foreach (var col in novoObjetoMundo.GetComponentsInChildren<Collider>()) col.enabled = true;
+            
+            // Se o prefab original continha o script lógico da fogueira, ele vai iniciar perfeitamente
+            Fogueira fogueiraScript = novoObjetoMundo.GetComponent<Fogueira>();
+            if (fogueiraScript != null)
+            {
+                // Como ele foi criado agora, executa o Start interno dele para limpar partículas e UI
+                Debug.Log("Fogueira física criada e pronta para interação!");
+            }
+
+            // 2. Remove o item logicamente do teu InventoryManager geral
+            if (Object.FindFirstObjectByType<InventoryManager>() != null)
+            {
+                Object.FindFirstObjectByType<InventoryManager>().RemoveItem(itemAtivo);
+            }
+
+            // 3. Limpa o slot atual da Hotbar e desequipa o modelo visual da tua mão
+            DefinirItemNoSlot(slotSelecionado, null);
+            
+            // 4. Força a atualização da interface do inventário geral
+            if (Object.FindFirstObjectByType<InventoryUI>() != null)
+            {
+                Object.FindFirstObjectByType<InventoryUI>().AtualizarUI();
+            }
+
+            Debug.Log($"[Sucesso] {itemAtivo.itemName} colocado no mundo!");
+        }
     }
 
     // Remove um item específico da hotbar caso ele seja gasto (ex: no Crafting)

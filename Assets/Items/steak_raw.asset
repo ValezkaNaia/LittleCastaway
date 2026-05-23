@@ -19,6 +19,10 @@ MonoBehaviour:
   isConsumable: 0
   pontosRestauracao: 30
   tipoConsumivel: 0
+  isCombustivel: 0
+  isCru: 1
+  itemCozinhado: {fileID: 11400000, guid: 003c98e3381f352479adbc3e58e9e0e3, type: 2}
+  isPlaceable: 0
   holdOffset: {x: 0, y: 0, z: 0}
   holdRotation: {x: 0, y: 0, z: 0}
   holdScale: {x: 0, y: 0, z: 0}

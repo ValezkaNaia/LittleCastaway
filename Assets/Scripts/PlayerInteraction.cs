@@ -174,6 +174,33 @@ public class PlayerInteraction : MonoBehaviour
                     }
                 }
             }
+
+            // =================================================================
+            // 6. INTERAGIR COM A FOGUEIRA
+            // =================================================================
+            else if (hit.collider.GetComponent<Fogueira>() != null)
+            {
+                Fogueira fogueira = hit.collider.GetComponent<Fogueira>();
+                olhouParaAlgoInterativo = true;
+
+                if (fogueira.GetEstaAcesa())
+                {
+                    // Mostra o tempo restante caso esteja acesa
+                    int tempoInt = Mathf.CeilToInt(fogueira.GetTempoRestante());
+                    DefinirTexto($"Fireplace (Active: {tempoInt}s) [E]");
+                }
+                else
+                {
+                    DefinirTexto("Open Fireplace [E]");
+                }
+
+                // Quando o jogador prime a tecla [E], abre a interface de culinária
+                if (Keyboard.current.eKey.wasPressedThisFrame)
+                {
+                    fogueira.AbrirInterfaceFogueira();
+                    EsconderTexto();
+                }
+            }
         }
 
         if (!olhouParaAlgoInterativo)

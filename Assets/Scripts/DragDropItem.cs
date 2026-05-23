@@ -57,40 +57,65 @@ public class DragDropItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
         canvasGroup.alpha = 1.0f;
         canvasGroup.blocksRaycasts = true;
 
-        bool foiColocadoNaHotbar = false;
+        bool foiColocado = false;
 
-        // DETEÇÃO POR DISTÂNCIA: Procura todos os slots de Hotbar na cena
+        // 1. VERIFICAÇÃO PARA HOTBAR
         HotbarSlotUI[] todosOsSlotsHotbar = Object.FindObjectsByType<HotbarSlotUI>(FindObjectsSortMode.None);
-        
-        // Pega no slot de inventário de onde este ícone saiu originalmente
-        InventorySlot slotOrigem = paiOriginal.GetComponent<InventorySlot>();
+        InventorySlot slotOrigemInv = paiOriginal.GetComponent<InventorySlot>();
+        FogueiraSlotUI slotOrigemFogueira = paiOriginal.GetComponent<FogueiraSlotUI>();
 
-        if (slotOrigem != null && slotOrigem.GetItem() != null)
+        ItemData itemArrastado = null;
+        if (slotOrigemInv != null) itemArrastado = slotOrigemInv.GetItem();
+        if (slotOrigemFogueira != null) itemArrastado = slotOrigemFogueira.GetItem();
+
+        if (itemArrastado != null)
         {
-            ItemData itemArrastado = slotOrigem.GetItem();
-
+            // Testar se foi solto perto da Hotbar
             foreach (HotbarSlotUI slotHotbar in todosOsSlotsHotbar)
             {
-                RectTransform rectSlot = slotHotbar.GetComponent<RectTransform>();
-                
-                // Calcula a distância em pixels entre o ícone do rato e o centro do slot da Hotbar
-                float distancia = Vector2.Distance(rectTransform.position, rectSlot.position);
-
-                // Se soltaste o item a menos de 60 pixels do centro do slot da Hotbar
-                if (distancia < 60f) 
+                if (Vector2.Distance(rectTransform.position, slotHotbar.GetComponent<RectTransform>().position) < 60f) 
                 {
                     if (HotbarManager.instance != null)
                     {
                         HotbarManager.instance.DefinirItemNoSlot(slotHotbar.indexDoSlot, itemArrastado);
-                        Debug.Log($"[Sucesso] {itemArrastado.itemName} colocado no slot {slotHotbar.indexDoSlot} por proximidade!");
-                        foiColocadoNaHotbar = true;
+                        foiColocado = true;
                     }
                     break;
                 }
             }
+
+            // 2. VERIFICAÇÃO PARA SLOTS DA FOGUEIRA (Se falhou a Hotbar)
+            if (!foiColocado)
+            {
+                FogueiraSlotUI[] slotsFogueira = Object.FindObjectsByType<FogueiraSlotUI>(FindObjectsSortMode.None);
+                foreach (FogueiraSlotUI slotFog in slotsFogueira)
+                {
+                    if (Vector2.Distance(rectTransform.position, slotFog.GetComponent<RectTransform>().position) < 60f)
+                    {
+                        // Regra: O slot de entrada só aceita coisas cruas. O de saída não aceita drops diretos
+                        if (slotFog.tipoDeSlot == FogueiraSlotUI.TipoSlotFogueira.Entrada && itemArrastado.isCru)
+                        {
+                            slotFog.DefinirItem(itemArrastado);
+                            
+                            // Se tirou do inventário geral para pôr na fogueira, remove uma unidade logicamente
+                            if (slotOrigemInv != null && Object.FindFirstObjectByType<InventoryManager>() != null)
+                            {
+                                Object.FindFirstObjectByType<InventoryManager>().RemoveItem(itemArrastado);
+                            }
+                            
+                            foiColocado = true;
+                            
+                            // Atualiza os botões da fogueira
+                            if (Object.FindFirstObjectByType<FogueiraUI>() != null)
+                                Object.FindFirstObjectByType<FogueiraUI>().AtualizarEstadoDaUI();
+                        }
+                        break;
+                    }
+                }
+            }
         }
 
-        // Se não foi solto perto de nenhum slot da hotbar, volta para a posição inicial no inventário
+        // Se o arrasto terminou no meio do nada, devolve ao quadrado de origem
         transform.SetParent(paiOriginal, true);
         rectTransform.localPosition = posicaoOriginal;
     }

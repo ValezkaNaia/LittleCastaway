@@ -16,6 +16,14 @@ public class ItemData : ScriptableObject
     public enum TipoConsumivel { Comida, Agua }
     public TipoConsumivel tipoConsumivel;
 
+    [Header("Sistema de Culinária / Fogueira")]
+    public bool isCombustivel;       // Se este item pode ser usado para acender o fogo (ex: Madeira)
+    public bool isCru;               // Se o item é um alimento cru (ex: Carne Crua)
+    public ItemData itemCozinhado;   // Arrastas aqui o ItemData da versão cozinhada (ex: Carne Cozinhada)
+
+    [Header("Estruturas Colocáveis")]
+    public bool isPlaceable; // Marca como TRUE no ItemData da Fogueira
+
     [Header("Posição na Mão (quando equipado)")]
     [Tooltip("Offset de posição relativo ao transform da mão (HandTransform).")]
     public Vector3 holdOffset  = Vector3.zero;
