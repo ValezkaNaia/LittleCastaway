@@ -62,13 +62,24 @@ public class Fogueira : MonoBehaviour
 
     public void TentarAcender(int quantidadeMadeira)
     {
-        if (estaAcesa) return;
+        // Se já estiver acesa, podes querer apenas acumular tempo (combustível)
+        if (estaAcesa)
+        {
+            tempoRestante = Mathf.Clamp(tempoRestante + 20f, 0f, tempoAcesaMax);
+            return;
+        }
 
         if (quantidadeMadeira >= 3)
         {
             estaAcesa = true;
             tempoRestante = tempoAcesaMax;
-            if (efeitoFogoPrefab != null) efeitoFogoPrefab.SetActive(true);
+            
+            // LIGA O OBJETO DO FOGO NA CENA
+            if (efeitoFogoPrefab != null) 
+            {
+                efeitoFogoPrefab.SetActive(true);
+            }
+            
             Debug.Log("A fogueira foi acesa!");
         }
     }
