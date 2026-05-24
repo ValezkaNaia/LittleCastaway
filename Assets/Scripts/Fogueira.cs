@@ -14,15 +14,28 @@ public class Fogueira : MonoBehaviour
 
     void Start()
     {
-        // Encontra automaticamente o script do painel que está no Canvas da cena
+        // Se a variável estiver vazia, faz uma busca inteligente pelos filhos do Canvas
         if (painelFogueiraUI == null)
         {
-            painelFogueiraUI = Object.FindFirstObjectByType<FogueiraUI>();
+            // 1. Encontra o Canvas da cena (que está ativo)
+            Canvas canvasGeral = Object.FindFirstObjectByType<Canvas>();
+            
+            if (canvasGeral != null)
+            {
+                // 2. Procura dentro dele (incluindo objetos desativados) pelo componente FogueiraUI
+                painelFogueiraUI = canvasGeral.GetComponentInChildren<FogueiraUI>(true);
+            }
+        }
+
+        // Verificação de segurança para sabermos se correu bem
+        if (painelFogueiraUI == null)
+        {
+            Debug.LogError("Erro Crítico: Não foi possível encontrar o componente FogueiraUI dentro do Canvas!");
         }
 
         if (efeitoFogoPrefab != null) efeitoFogoPrefab.SetActive(false);
         
-        // Desativa o painel no início do jogo de forma segura
+        // Garante que começa fechado de forma segura
         if (painelFogueiraUI != null) painelFogueiraUI.gameObject.SetActive(false);
     }
 
@@ -32,6 +45,13 @@ public class Fogueira : MonoBehaviour
         {
             tempoRestante -= Time.deltaTime;
             
+            // ADICIONA ISTO: Atualiza o texto visual da UI enquanto o tempo corre!
+            if (painelFogueiraUI != null && painelFogueiraUI.gameObject.activeSelf)
+            {
+                // Aqui chamamos o método que atualiza os textos e o tempo da UI
+                painelFogueiraUI.AtualizarEstadoDaUI(); 
+            }
+
             // Atualiza o valor dinâmico para o texto do temporizador na UI
             if (tempoRestante <= 0)
             {
@@ -83,6 +103,13 @@ public class Fogueira : MonoBehaviour
 
     public void FecharInterfaceFogueira()
     {
-        if (painelFogueiraUI != null) painelFogueiraUI.gameObject.SetActive(false);
+        if (painelFogueiraUI != null)
+        {
+            painelFogueiraUI.gameObject.SetActive(false);
+
+            // 2. CORREÇÃO DE FOCO: Força o Unity a prender o rato de forma limpa
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
     }
 }

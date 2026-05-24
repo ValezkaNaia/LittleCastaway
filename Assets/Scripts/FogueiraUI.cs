@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem; // Garante que a Input System está mapeada
 using TMPro;
 
 public class FogueiraUI : MonoBehaviour
@@ -12,7 +13,7 @@ public class FogueiraUI : MonoBehaviour
     public Button botaoCozinhar;     // O teu ButtonCozinhar (Cook)
     public Button botaoAcender;      // O novo botão para pôr lenha
     public TextMeshProUGUI textoBotaoAcender; // Texto de feedback do botão de acender
-    public TextMeshProUGUI textoTempoFogueira; // Texto opcional para mostrar os 60 segundos a descer
+    public TextMeshProUGUI textoTempoFogueira; // Texto para mostrar os segundos a descer
 
     private Fogueira fogueiraAtual;
     private InventoryManager inventoryManager;
@@ -31,27 +32,65 @@ public class FogueiraUI : MonoBehaviour
     {
         fogueiraAtual = fogueiraLogica;
         AtualizarEstadoDaUI();
+
+        // Liberta o rato para o jogador conseguir clicar!
+        AtivarRato(true);
+    }
+    // Função auxiliar para controlar o estado do cursor
+    private void AtivarRato(bool ativar)
+    {
+        if (ativar)
+        {
+            Cursor.lockState = CursorLockMode.None; // Liberta o rato do centro da tela
+            Cursor.visible = true;                  // Torna o cursor visível
+            
+            // DICA EXTRA: Se tiveres um script de movimentação/câmara no teu Player (ex: PlayerLook),
+            // deves desativá-lo aqui para a câmara não mexer enquanto usas o menu:
+            // Object.FindFirstObjectByType<PlayerLook>().enabled = false;
+        }
+        else
+        {
+            Cursor.lockState = CursorLockMode.Locked; // Prende o rato no centro novamente
+            Cursor.visible = false;                   // Esconde o cursor
+            
+            // Reativa a câmara do jogador:
+            // Object.FindFirstObjectByType<PlayerLook>().enabled = true;
+        }
     }
 
     void Update()
     {
-        if (fogueiraAtual != null && fogueiraAtual.gameObject.activeSelf)
+        // SEGURANÇA: Se a fogueira atual sumir (ex: destruída), fecha a interface
+        if (fogueiraAtual == null)
         {
-            // Atualiza o relógio dos 60 segundos na tela caso ela esteja acesa
-            if (fogueiraAtual.GetEstaAcesa())
+            AtivarRato(false); // Garante que o rato prende se a fogueira sumir
+            gameObject.SetActive(false);
+            return;
+        }
+
+        // Se o jogador carregar em ESC para fechar a fogueira
+        if (Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            // Deixamos a fogueira tratar do fecho e do reset do rato centralizado
+            fogueiraAtual.FecharInterfaceFogueira();
+            return;
+        }
+
+        // CONTROLADOR DO TEMPO EM REAL-TIME
+        if (fogueiraAtual.GetEstaAcesa())
+        {
+            if (textoTempoFogueira != null)
             {
-                if (textoTempoFogueira != null)
-                {
-                    textoTempoFogueira.text = $"Fogo Ativo: {Mathf.CeilToInt(fogueiraAtual.tempoAcesaMax)}s";
-                }
-                if (textoBotaoAcender != null) textoBotaoAcender.text = "Fogueira Acesa!";
-                if (botaoAcender != null) botaoAcender.interactable = false;
+                int tempoInt = Mathf.CeilToInt(fogueiraAtual.GetTempoRestante());
+                textoTempoFogueira.text = $"Fogo Ativo: {tempoInt}s";
             }
-            else
-            {
-                if (textoTempoFogueira != null) textoTempoFogueira.text = "Fogueira Apagada";
-                VerificarMadeirasNoInventario();
-            }
+            if (textoBotaoAcender != null) textoBotaoAcender.text = "Fogueira Acesa!";
+            if (botaoAcender != null) botaoAcender.interactable = false;
+        }
+        else
+        {
+            if (textoTempoFogueira != null) textoTempoFogueira.text = "Fogueira Apagada";
+            VerificarMadeirasNoInventario();
         }
     }
 
@@ -59,7 +98,6 @@ public class FogueiraUI : MonoBehaviour
     {
         if (inventoryManager == null) return;
 
-        // Procura quantas madeiras o jogador tem no total do inventário
         int totalMadeiras = 0;
         foreach (var slot in inventoryManager.items)
         {
@@ -68,7 +106,7 @@ public class FogueiraUI : MonoBehaviour
                 totalMadeiras += slot.quantidade;
             }
         }
-        // Atualiza o texto e o estado do botão de acender com base na quantidade de madeira encontrada
+
         if (textoBotaoAcender != null)
         {
             if (totalMadeiras >= 3)
@@ -88,10 +126,8 @@ public class FogueiraUI : MonoBehaviour
     {
         if (fogueiraAtual == null || inventoryManager == null) return;
 
-        // Conta e consome as 3 madeiras
         int madeirasParaRemover = 3;
         
-        // Cria uma lista temporária para evitar erros de modificação durante o loop
         for (int i = inventoryManager.items.Count - 1; i >= 0; i--)
         {
             var slot = inventoryManager.items[i];
@@ -113,10 +149,8 @@ public class FogueiraUI : MonoBehaviour
             }
         }
 
-        // Avisa o objeto físico no mundo para ativar as partículas de fogo
         fogueiraAtual.TentarAcender(3);
         
-        // Força a atualização visual do inventário geral
         if (Object.FindFirstObjectByType<InventoryUI>() != null)
             Object.FindFirstObjectByType<InventoryUI>().AtualizarUI();
 
@@ -130,12 +164,11 @@ public class FogueiraUI : MonoBehaviour
 
         ItemData alimentoCru = slotEntrada.GetItem();
 
-        // Validação de segurança: Só cozinha se for cru e se tiver um output configurado no ItemData
         if (alimentoCru.isCru && alimentoCru.itemCozinhado != null)
         {
             ItemData alimentoPronto = alimentoCru.itemCozinhado;
 
-            // Transforma o slot de entrada em vazio e gera a carne cozinhada na saída
+
             slotEntrada.DefinirItem(null);
             slotSaida.DefinirItem(alimentoPronto);
 
@@ -147,7 +180,6 @@ public class FogueiraUI : MonoBehaviour
     {
         if (fogueiraAtual == null) return;
 
-        // O botão Cook só fica clicável se a fogueira estiver acesa e se houver um item válido na entrada
         bool podeCozinhar = fogueiraAtual.GetEstaAcesa() && 
                             slotEntrada.GetItem() != null && 
                             slotEntrada.GetItem().isCru;

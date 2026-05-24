@@ -43,7 +43,13 @@ public class InventoryUI : MonoBehaviour
             else // O INVENTÁRIO FECHOU!
             {
                 Cursor.lockState = CursorLockMode.Locked; 
-                Cursor.visible = false;                   
+                Cursor.visible = false;      
+
+                // LINHA DE SEGURANÇA: Limpa o foco do EventSystem para o inventário receber cliques frescos
+                if (UnityEngine.EventSystems.EventSystem.current != null)
+                {
+                    UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
+                }             
                 
                 if (MesaCraftingManager.instance != null) 
                     MesaCraftingManager.instance.FecharMesa();
