@@ -20,3 +20,4 @@ MonoBehaviour:
     quantidade: 5
   itemResultado: {fileID: 11400000, guid: e7b506c0ec3e3164f9cafe46df5e0806, type: 2}
   quantidadeResultado: 1
+  notaNecessariaParaDesbloquear: {fileID: 21300000, guid: e8372df8f7994ef4e9dd600475536907, type: 3}
