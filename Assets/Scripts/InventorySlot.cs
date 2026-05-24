@@ -18,8 +18,9 @@ public class InventorySlot : MonoBehaviour
 
         if (item != null)
         {
-            iconeObject.SendMessage("set_sprite", item.itemIcon, SendMessageOptions.DontRequireReceiver);
+            // Força a ativação do objeto ANTES de aplicar o sprite para evitar delays visuais
             iconeObject.SetActive(true);
+            iconeObject.SendMessage("set_sprite", item.itemIcon, SendMessageOptions.DontRequireReceiver);
 
             // Atualiza o texto da quantidade no ecrã
             if (textoQuantidade != null)
@@ -43,7 +44,6 @@ public class InventorySlot : MonoBehaviour
         }
     }
 
-    // Função necessária para que o sistema de Drag and Drop da Hotbar saiba que item está neste slot
     public ItemData GetItem()
     {
         return itemNoSlot;
@@ -51,7 +51,11 @@ public class InventorySlot : MonoBehaviour
 
     public void ClicouNoSlot()
     {
-        if (itemNoSlot != null && MesaCraftingManager.instance != null)
+        // MELHORIA CRUCIAL: Só envia para o Crafting se o script existir E se a mesa de crafting estiver VISÍVEL/ATIVA no ecrã
+        bool craftingEstaAberto = MesaCraftingManager.instance != null && 
+                                  MesaCraftingManager.instance.gameObject.activeInHierarchy;
+
+        if (itemNoSlot != null && craftingEstaAberto)
         {
             // Tenta colocar o item na mesa de crafting
             bool aceitou = MesaCraftingManager.instance.AdicionarIngredienteAMesa(itemNoSlot);
@@ -77,35 +81,20 @@ public class InventorySlot : MonoBehaviour
                         }
                     }
                     
-                    // Atualiza a parte visual
-                    Object.FindFirstObjectByType<InventoryUI>().AtualizarUI();
+                    // Atualiza a parte visual de forma limpa
+                    InventoryUI invUI = Object.FindFirstObjectByType<InventoryUI>();
+                    if (invUI != null) invUI.AtualizarUI();
                 }
             }
         }
+        else if (itemNoSlot != null && !craftingEstaAberto)
+        {
+            // [OPCIONAL] O que acontece se clicares num item com o inventário normal aberto?
+            // Se o item for comida/consumível, podes adicionar aqui a lógica para o jogador comer!
+            // Exemplo: 
+            // if(itemNoSlot.isComida) { ComerItem(); }
+            
+            Debug.Log($"Clicaste em {itemNoSlot.itemName}, mas o Crafting está fechado. Nada acontece.");
+        }
     }
 }
-/*using UnityEngine;
-
-public class InventorySlot : MonoBehaviour
-{
-// Arrastarás o objeto "Icon" (o filho do Slot) para aqui no Inspector.
-    public GameObject iconeObject; 
-
-    public void DefineItem(ItemData item)
-    {
-        if (iconeObject == null) return;
-
-        if (item != null)
-        {
-            // Enviamos uma mensagem para o componente de imagem mudar o sprite
-            // Isto funciona mesmo sem a referência de UI ativa no VS Code!
-            iconeObject.SendMessage("set_sprite", item.itemIcon, SendMessageOptions.DontRequireReceiver);
-            iconeObject.SetActive(true);
-        }
-        else
-        {
-            iconeObject.SetActive(false);
-        }
-    }
-
-}*/
