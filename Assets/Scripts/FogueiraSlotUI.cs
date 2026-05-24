@@ -83,7 +83,6 @@ public class FogueiraSlotUI : MonoBehaviour, IDropHandler, IPointerClickHandler
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        // Se for o slot de saída e tiver lá a carne cozinhada...
         if (tipoDeSlot == TipoSlotFogueira.Saida && itemNoSlot != null)
         {
             InventoryManager inventory = Object.FindFirstObjectByType<InventoryManager>();
@@ -91,22 +90,21 @@ public class FogueiraSlotUI : MonoBehaviour, IDropHandler, IPointerClickHandler
 
             if (inventory != null)
             {
-                // 1. Guarda a referência da carne cozinhada ANTES de limpar o slot
                 ItemData carneCozinhada = itemNoSlot;
 
-                // 2. Adiciona os dados corretos da carne cozinhada ao inventário lógico
+                // 1. Adiciona ao inventário lógico
                 inventory.items.Add(new ItemAcumulado(carneCozinhada, 1)); 
                 
-                // 3. Limpa o slot de saída da fogueira (visto que o jogador já a tirou de lá)
+                // 2. Limpa o slot da fogueira
                 DefinirItem(null);
 
-                // 4. CORREÇÃO CRUCIAL: Força o Inventário a redesenhar as imagens dos slots!
+                // 3. ATUALIZAÇÃO FORÇADA: Dizemos ao inventário para ler a lista do zero imediatamente
                 if (inventoryUI != null) 
                 {
                     inventoryUI.AtualizarUI(); 
                 }
                 
-                Debug.Log($"[Recolha] {carneCozinhada.itemName} movida com o ícone correto para o inventário!");
+                Debug.Log($"[Recolha] {carneCozinhada.itemName} movida.");
             }
         }
     }
