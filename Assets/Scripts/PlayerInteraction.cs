@@ -15,9 +15,7 @@ public class PlayerInteraction : MonoBehaviour
 
     [Header("Animações")]
     public Animator animatorJogador; 
-    [Tooltip("Nome do Trigger no Animator para o soco com a mão ESQUERDA")]
     public string nomeDoTriggerSocoEsquerdo = "PunchLeft"; 
-    [Tooltip("Nome do Trigger no Animator para o soco com a mão DIREITA")]
     public string nomeDoTriggerSocoDireito = "PunchRight"; 
 
     private bool proximoSocoEsquerdo = true; 
@@ -31,7 +29,6 @@ public class PlayerInteraction : MonoBehaviour
 
     void Update()
     {
-        // Se estiveres a ler uma nota, bloqueia a interação com outras coisas
         if (NoteManager.isReading) return;
 
         Vector3 rayOrigin = cam.position;
@@ -40,16 +37,23 @@ public class PlayerInteraction : MonoBehaviour
 
         Debug.DrawRay(rayOrigin, rayDirection * interactionRange, Color.red);
 
-        // Faz o scan ao que está à tua frente
         bool acertouEmAlgo = Physics.SphereCast(rayOrigin, interactionRadius, rayDirection, out hit, interactionRange);
 
         // =================================================================
         // A. SISTEMA DE COMBATE (CLIQUE ESQUERDO) - Funciona mesmo no ar!
         // =================================================================
-        // Verifica se o rato está trancado no meio (ou seja, menus estão fechados)
         if (Cursor.lockState == CursorLockMode.Locked && Mouse.current.leftButton.wasPressedThisFrame)
         {
             FerramentaAtaque armaEquipada = GetComponentInChildren<FerramentaAtaque>();
+
+            // =================================================================
+            // NOVO: DESTRUIR OBJETOS FRÁGEIS (Flores, arbustos pequenos, etc)
+            // =================================================================
+            if (acertouEmAlgo && hit.collider.CompareTag("Flower"))
+            {
+                // Destrói a flor instantaneamente!
+                Destroy(hit.collider.gameObject);
+            }
 
             // Se o jogador tiver alguma ferramenta equipada nas mãos...
             if (armaEquipada != null)
@@ -57,9 +61,8 @@ public class PlayerInteraction : MonoBehaviour
                 // 1. É UMA LANÇA?
                 if (armaEquipada.ehLanca)
                 {
-                    armaEquipada.JogarAnimacaoGatilho(); // Animação no ar
+                    armaEquipada.JogarAnimacaoGatilho(); 
                     
-                    // Só dá dano se acertar num animal
                     if (acertouEmAlgo && hit.collider.CompareTag("Animal"))
                     {
                         AnimalAI animal = hit.collider.GetComponent<AnimalAI>();
@@ -72,9 +75,8 @@ public class PlayerInteraction : MonoBehaviour
                 // 2. É UM MACHADO?
                 else if (armaEquipada.ehMachado)
                 {
-                    armaEquipada.JogarAnimacaoGatilho(); // Animação no ar
+                    armaEquipada.JogarAnimacaoGatilho(); 
                     
-                    // Só corta se acertar numa árvore
                     if (acertouEmAlgo && hit.collider.CompareTag("ArvoreMadeira"))
                     {
                         ArvoreMadeira arvore = hit.collider.GetComponent<ArvoreMadeira>();
@@ -85,7 +87,6 @@ public class PlayerInteraction : MonoBehaviour
             // 3. MÃOS NUAS (Não tem nenhuma arma equipada) -> SOCO!
             else 
             {
-                // Dispara a animação independentemente de haver alvo ou não!
                 string triggerParaUsar = proximoSocoEsquerdo ? nomeDoTriggerSocoEsquerdo : nomeDoTriggerSocoDireito;
                 if (animatorJogador != null)
                 {
@@ -93,7 +94,6 @@ public class PlayerInteraction : MonoBehaviour
                 }
                 proximoSocoEsquerdo = !proximoSocoEsquerdo; 
 
-                // Só dá dano se o soco acertar num animal
                 if (acertouEmAlgo && hit.collider.CompareTag("Animal"))
                 {
                     AnimalAI animal = hit.collider.GetComponent<AnimalAI>();
@@ -178,21 +178,18 @@ public class PlayerInteraction : MonoBehaviour
                     }
                     else 
                     {
-                        // Aqui a UI só te manda atacar se tiveres a ferramenta certa!
                         FerramentaAtaque armaEquipada = GetComponentInChildren<FerramentaAtaque>();
                         
-                        if (armaEquipada == null) // Sem arma (Soco)
+                        if (armaEquipada == null) 
                         {
                             olhouParaAlgoInterativo = true;
                             DefinirTexto("Punch [Left Click]");
                         }
-                        else if (armaEquipada.ehLanca) // Tem Lança
+                        else if (armaEquipada.ehLanca) 
                         {
                             olhouParaAlgoInterativo = true;
                             DefinirTexto("Attack with Spear [Left Click]");
                         }
-                        // Se tiver o machado, "olhouParaAlgoInterativo" continua false, o texto apaga, 
-                        // indicando visualmente ao jogador que não pode usar aquilo ali.
                     }
                 }
             }
@@ -205,7 +202,6 @@ public class PlayerInteraction : MonoBehaviour
                 {
                     FerramentaAtaque armaEquipada = GetComponentInChildren<FerramentaAtaque>();
 
-                    // Só mostra o texto de cortar a árvore se tiveres de facto um machado nas mãos!
                     if (armaEquipada != null && armaEquipada.ehMachado)
                     {
                         olhouParaAlgoInterativo = true;
@@ -214,7 +210,7 @@ public class PlayerInteraction : MonoBehaviour
                 }
             }
 
-            // 5. APANHAR FRUTA DAS ÁRVORES (Isto continua a ser no E)
+            // 5. APANHAR FRUTA DAS ÁRVORES
             else if (hit.collider.CompareTag("ArvoreFruta"))
             {
                 ArvoreFruta arvoreFruta = hit.collider.GetComponent<ArvoreFruta>();
@@ -267,7 +263,6 @@ public class PlayerInteraction : MonoBehaviour
             }
         }
 
-        // Se o jogador não estiver a olhar para nada que seja interativo, apaga o texto
         if (!olhouParaAlgoInterativo)
         {
             EsconderTexto();
@@ -316,4 +311,4 @@ public class PlayerInteraction : MonoBehaviour
             Gizmos.DrawWireSphere(endPosition, interactionRadius);
         }
     }
-}   
+}

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 3109928813825500847}
   - component: {fileID: 2487957488571339323}
   - component: {fileID: 8119850435517770163}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: PT_Generic_Shrub_01_green_LOD1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -58,6 +58,11 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -80,9 +85,11 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!1 &5153741093904279990
 GameObject:
@@ -94,9 +101,10 @@ GameObject:
   m_Component:
   - component: {fileID: 5534383620200805132}
   - component: {fileID: 762246597294785661}
-  m_Layer: 0
+  - component: {fileID: 7743363550638551331}
+  m_Layer: 5
   m_Name: PT_Generic_Shrub_01_green
-  m_TagString: Untagged
+  m_TagString: Flower
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -109,7 +117,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5153741093904279990}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -146,6 +154,27 @@ LODGroup:
     renderers:
     - renderer: {fileID: 1955015890131924908}
   m_Enabled: 1
+--- !u!65 &7743363550638551331
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5153741093904279990}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 2.4204335, y: 2.5273907, z: 2.5160418}
+  m_Center: {x: 0.005993484, y: 0.7636938, z: 0.026567858}
 --- !u!1 &8255632427206956809
 GameObject:
   m_ObjectHideFlags: 0
@@ -157,7 +186,7 @@ GameObject:
   - component: {fileID: 5280803450886040975}
   - component: {fileID: 475127693172060145}
   - component: {fileID: 2030511849321712008}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: PT_Generic_Shrub_01_green_LOD0
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -204,6 +233,11 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -226,9 +260,11 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!1 &8262811030362704149
 GameObject:
@@ -241,7 +277,7 @@ GameObject:
   - component: {fileID: 4509435437753868090}
   - component: {fileID: 7700781079062617998}
   - component: {fileID: 1955015890131924908}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: PT_Generic_Shrub_01_green_LOD2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -288,6 +324,11 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -310,7 +351,9 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
