@@ -29,6 +29,22 @@ public class AnimalAI : MonoBehaviour
     [Header("Drop de Itens")]
     public GameObject prefabCarneDoChao; 
 
+    // =================================================================
+    // NOVAS VARIÁVEIS PARA PARTÍCULAS
+    // =================================================================
+    [Header("Efeitos Visuais - Geral")]
+    [Tooltip("Arrasta o teu Prefab da partícula configurada com 'Stop Action = Destroy'")]
+    public GameObject particulaMortePrefab;
+    [Tooltip("Altura onde a partícula de MORTE vai aparecer")]
+    public float offsetAlturaParticulaMorte = 1.0f; 
+
+    [Header("Efeitos Visuais - Pets (SOMENTE PETS)")]
+    [Tooltip("Prefab das partículas de coração ao domesticar")]
+    public GameObject particulaDomesticaoPrefab; // TEU PREFAB DE CORAÇÕES AQUI
+    [Tooltip("Offset de altura para as partículas de coração")]
+    public float offsetAlturaCorações = 1.0f; 
+    // =================================================================
+
     [Header("Anti-Stuck System")]
     public float timeToConsiderStuck = 3f; 
     private float tempoEncravado = 0f;
@@ -147,7 +163,23 @@ public class AnimalAI : MonoBehaviour
     {
         if (tipoAnimal != Comportamento.Pet || domesticado || provocado) return;
         macasDadas++;
-        if (macasDadas >= macasParaDomesticar) domesticado = true;
+
+        // =================================================================
+        // LÓGICA DE SUCESSO NA DOMESTICAÇÃO (Corações)
+        // =================================================================
+        if (macasDadas >= macasParaDomesticar)
+        {
+            domesticado = true;
+            Debug.Log(gameObject.name + " foi domesticado! <3");
+
+            // Cria as partículas de coração
+            if (particulaDomesticaoPrefab != null)
+            {
+                Vector3 posicaoSpawn = transform.position + new Vector3(0, offsetAlturaCorações, 0);
+                // Quaternion.identity assume que as partículas voam para cima por defeito
+                Instantiate(particulaDomesticaoPrefab, posicaoSpawn, Quaternion.identity);
+            }
+        }
     }
 
     void ColarAoNavMesh() { NavMeshHit hit; if (NavMesh.SamplePosition(transform.position, out hit, 20.0f, NavMesh.AllAreas)) { transform.position = hit.position; agente.Warp(hit.position); } }
@@ -157,5 +189,23 @@ public class AnimalAI : MonoBehaviour
     void AndarAleatoriamente() { if (!agente.isOnNavMesh || domesticado || tempoADesencravar > 0) return; if (tipoAnimal == Comportamento.Predador && Vector3.Distance(transform.position, player.position) < distanciaDetecao) return; Vector3 dir = Random.insideUnitSphere * 10f + transform.position; NavMeshHit hit; if (NavMesh.SamplePosition(dir, out hit, 10f, 1)) agente.SetDestination(hit.position); }
     void FogirDoPlayer() { if (!agente.isOnNavMesh || tempoADesencravar > 0) return; agente.SetDestination(transform.position + (transform.position - player.position).normalized * 10f); }
     public void ReceberDano(float dano, bool porPredador = false) { vida -= dano; if (tipoAnimal == Comportamento.Pet && !domesticado) provocado = true; if (vida <= 0) Morrer(porPredador); }
-    void Morrer(bool porPredador) { if (darCarneAoMorrer && tipoAnimal != Comportamento.Pet && !porPredador && prefabCarneDoChao != null) Instantiate(prefabCarneDoChao, transform.position + Vector3.up, Quaternion.identity); Destroy(gameObject); }
+    
+    void Morrer(bool porPredador) 
+    { 
+        // Cria a partícula de morte
+        if (particulaMortePrefab != null)
+        {
+            Vector3 posicaoSpawn = transform.position + new Vector3(0, offsetAlturaParticulaMorte, 0);
+            Instantiate(particulaMortePrefab, posicaoSpawn, Quaternion.identity);
+        }
+
+        // Deixa cair carne se aplicável
+        if (darCarneAoMorrer && tipoAnimal != Comportamento.Pet && !porPredador && prefabCarneDoChao != null) 
+        {
+            Instantiate(prefabCarneDoChao, transform.position + Vector3.up, Quaternion.identity); 
+        }
+
+        // Destrói o animal
+        Destroy(gameObject); 
+    }
 }

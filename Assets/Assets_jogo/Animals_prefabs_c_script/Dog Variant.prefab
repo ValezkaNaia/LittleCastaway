@@ -118,4 +118,8 @@ MonoBehaviour:
   domesticado: 0
   provocado: 0
   prefabCarneDoChao: {fileID: 0}
+  particulaMortePrefab: {fileID: 4434088230247366390, guid: c818e153a65195d4bb334276515fd5b3, type: 3}
+  offsetAlturaParticulaMorte: 1
+  particulaDomesticaoPrefab: {fileID: 7563306768879707780, guid: 93f0c9080060a1841aac0fb491b59b4d, type: 3}
+  "offsetAlturaCora\xE7\xF5es": 1
   timeToConsiderStuck: 3

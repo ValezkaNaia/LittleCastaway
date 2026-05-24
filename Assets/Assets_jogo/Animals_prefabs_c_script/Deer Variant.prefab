@@ -121,6 +121,8 @@ MonoBehaviour:
   domesticado: 0
   provocado: 0
   prefabCarneDoChao: {fileID: 3872576327743985497, guid: cbb35c4a40e18bc41ab83409438d7446, type: 3}
+  particulaMortePrefab: {fileID: 4434088230247366390, guid: c818e153a65195d4bb334276515fd5b3, type: 3}
+  offsetAlturaParticula: 1
   timeToConsiderStuck: 3
 --- !u!65 &5863626163663166652
 BoxCollider:
