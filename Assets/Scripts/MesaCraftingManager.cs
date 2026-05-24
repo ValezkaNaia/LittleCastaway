@@ -89,18 +89,6 @@ public class MesaCraftingManager : MonoBehaviour
     // Varre as receitas criadas para ver se bate certo com o que está na mesa
     public void VerificarReceitas()
     {
-        // --- TESTE DE FORÇA EM CASO DE EMERGÊNCIA ---
-        // Vamos ignorar as receitas e ver se a UI do resultado acorda!
-        /*if (todasAsReceitas.Count > 0 && todasAsReceitas[0] != null)
-        {
-            receitaAtiva = todasAsReceitas[0]; // Pega na primeira receita da tua lista
-            slotResultado.SetupSlot(receitaAtiva.itemResultado, receitaAtiva.quantidadeResultado);
-            botaoCraftear.interactable = true;
-            Debug.Log("TESTE: Forçámos a UI a mostrar o item: " + receitaAtiva.itemResultado.itemName);
-            return; // Para o código aqui e ignora o resto do script!
-        }
-        // --------------------------------------------*/
-
         receitaAtiva = null;
         slotResultado.ClearSlot();
         botaoCraftear.interactable = false;
@@ -136,6 +124,17 @@ public class MesaCraftingManager : MonoBehaviour
         // Compara com cada receita configurada no teu projeto
         foreach (RecipeData receita in todasAsReceitas)
         {
+            // ====================================================================
+            // BLOQUEIO DE NOTAS/DIÁRIO (Mudei aqui!)
+            // ====================================================================
+            // Antes de verificar as pedras e a madeira, verifica se o jogador já aprendeu isto!
+            if (NoteManager.instance != null && !NoteManager.instance.TemNota(receita.notaNecessariaParaDesbloquear))
+            {
+                // O jogador não tem a nota, logo o jogo ignora esta receita!
+                continue; 
+            }
+            // ====================================================================
+
             bool receitaCorreta = true;
 
             // VERIFICAÇÃO FLEXÍVEL: Garante que a mesa tem pelo menos os ingredientes que a receita pede
@@ -159,7 +158,7 @@ public class MesaCraftingManager : MonoBehaviour
         // Se encontrou uma receita válida, liberta a pré-visualização e ativa o clique!
         if (receitaAtiva != null)
         {
-            Debug.Log("RECEITA DETETADA COM SUCESSO: " + receitaAtiva.itemResultado.itemName);
+            Debug.Log("RECEITA DETETADA COM SUCESSO E DESBLOQUEADA: " + receitaAtiva.itemResultado.itemName);
             slotResultado.SetupSlot(receitaAtiva.itemResultado, receitaAtiva.quantidadeResultado);
             botaoCraftear.interactable = true;
         }
@@ -206,42 +205,6 @@ public class MesaCraftingManager : MonoBehaviour
         
         Debug.Log("Item fabricado com sucesso e adicionado ao inventário!");
     }
-
-  /*void ExecutarCrafting()
-    {
-        if (receitaAtiva == null) return;
-
-        Debug.Log("A tentar fabricar o item: " + receitaAtiva.itemResultado.itemName);
-
-        // 1. Adiciona o resultado respeitando a quantidade configurada na receita
-        for (int i = 0; i < receitaAtiva.quantidadeResultado; i++)
-        {
-            inventory.AddItem(receitaAtiva.itemResultado);
-        }
-
-        // 2. Limpa os slots utilizados na mesa de crafting
-        foreach (var slot in slotsIngredientes)
-        {
-            slot.ClearSlot();
-        }
-        slotResultado.ClearSlot();
-        botaoCraftear.interactable = false;
-
-
-        // 3. ATUALIZAÇÃO VISUAL OBRIGATÓRIA DOS DOIS LADOS:
-        // Atualiza a UI do inventário principal para mostrar o novo Machado e remover as madeiras
-        InventoryUI invUI = Object.FindFirstObjectByType<InventoryUI>();
-        if (invUI != null) 
-        {
-            invUI.AtualizarUI();
-        }
-
-        receitaAtiva = null;
-        
-        Debug.Log("Item fabricado com sucesso e adicionado ao inventário!");
-    }*/
-
-    
     
     // Funções para ligar à abertura automática do painel
     public void AbrirMesa() => craftingPanel.SetActive(true);
@@ -262,6 +225,4 @@ public class MesaCraftingManager : MonoBehaviour
         slotResultado.ClearSlot();
         craftingPanel.SetActive(false);
     }
-
-    
 }

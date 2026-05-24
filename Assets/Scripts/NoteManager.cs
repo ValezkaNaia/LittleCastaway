@@ -9,8 +9,8 @@ public class NoteManager : MonoBehaviour
     public static bool isReading = false; 
 
     [Header("A Tua UI")]
-    public GameObject painelDoJornal; // O teu NoteReadingUI
-    public Image imagemDaNota; // Onde a nota aparece
+    public GameObject painelDoJornal; 
+    public Image imagemDaNota; 
     public GameObject botaoEsquerda;
     public GameObject botaoDireita;
 
@@ -51,17 +51,31 @@ public class NoteManager : MonoBehaviour
         }
     }
 
-    // A folha 3D no chão chama esta função!
+    // A folha 3D no chão chama esta função (1 Nota Simples)
     public void PickUpAndReadNote(Sprite novaNota)
     {
-        // Se é uma nota nova, guarda no diário
         if (!notasColecionadas.Contains(novaNota))
         {
             notasColecionadas.Add(novaNota);
         }
         
-        // Abre logo o ecrã na página da nota que acabaste de apanhar
         AbrirJornal(notasColecionadas.IndexOf(novaNota));
+    }
+
+    // O Livro de Tutorial chama esta função (Múltiplas Notas)
+    public void PickUpTutorial(Sprite[] paginasDoTutorial)
+    {
+        int indexDaPrimeiraPagina = notasColecionadas.Count;
+
+        foreach (Sprite pagina in paginasDoTutorial)
+        {
+            if (!notasColecionadas.Contains(pagina))
+            {
+                notasColecionadas.Add(pagina);
+            }
+        }
+        
+        AbrirJornal(indexDaPrimeiraPagina);
     }
 
     public void AbrirJornal(int numeroDaPagina)
@@ -81,7 +95,6 @@ public class NoteManager : MonoBehaviour
         CongelarJogo(false);
     }
 
-    // Funções para as tuas setinhas!
     public void ProximaPagina()
     {
         if (paginaAtual < notasColecionadas.Count - 1)
@@ -102,10 +115,8 @@ public class NoteManager : MonoBehaviour
 
     private void AtualizarEcra()
     {
-        // Mostra a imagem correspondente à página atual
         imagemDaNota.sprite = notasColecionadas[paginaAtual];
 
-        // Se estiveres na última página, esconde a seta da direita. Se estiveres na primeira, esconde a da esquerda!
         if (botaoDireita != null) botaoDireita.SetActive(paginaAtual < notasColecionadas.Count - 1);
         if (botaoEsquerda != null) botaoEsquerda.SetActive(paginaAtual > 0);
     }
@@ -116,5 +127,17 @@ public class NoteManager : MonoBehaviour
         Time.timeScale = congelar ? 0f : 1f; 
         Cursor.visible = congelar;
         Cursor.lockState = congelar ? CursorLockMode.None : CursorLockMode.Locked;
+    }
+
+    // =================================================================
+    // LIGAÇÃO AO CRAFTING (VERIFICAR DESBLOQUEIOS)
+    // =================================================================
+    public bool TemNota(Sprite notaProcurada)
+    {
+        // Se a receita não precisa de nota (está vazio no Inspector), deixamos construir logo!
+        if (notaProcurada == null) return true;
+
+        // Se precisa de nota, verifica se o sprite já está no nosso diário
+        return notasColecionadas.Contains(notaProcurada);
     }
 }

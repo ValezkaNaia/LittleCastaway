@@ -55,7 +55,7 @@ public class PlayerInteraction : MonoBehaviour
             }
 
             // =================================================================
-            // 2. LER NOTAS
+            // 2. LER NOTAS NORMAIS (1 Página)
             // =================================================================
             else if (hit.collider.GetComponent<WorldNote>() != null)
             {
@@ -66,6 +66,22 @@ public class PlayerInteraction : MonoBehaviour
                 if (Keyboard.current.fKey.wasPressedThisFrame)
                 {
                     nota.LerNota();
+                    EsconderTexto();
+                }
+            }
+
+            // =================================================================
+            // 2.5 LER GUIA DE TUTORIAL (Várias Páginas)
+            // =================================================================
+            else if (hit.collider.GetComponent<TutorialItem>() != null)
+            {
+                TutorialItem tutorial = hit.collider.GetComponent<TutorialItem>();
+                olhouParaAlgoInterativo = true;
+                DefinirTexto("Read Survival Guide [F]");
+
+                if (Keyboard.current.fKey.wasPressedThisFrame)
+                {
+                    tutorial.ApanharLivro();
                     EsconderTexto();
                 }
             }
