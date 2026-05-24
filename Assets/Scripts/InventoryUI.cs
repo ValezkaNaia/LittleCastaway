@@ -80,6 +80,29 @@ public class InventoryUI : MonoBehaviour
             }
         }
     }
+
+    // =================================================================
+    // NOVOS MÉTODOS: CHAMADOS PELA FOGUEIRA
+    // =================================================================
+    
+    // Força a abertura do inventário de forma limpa
+    public void AbrirInventarioExterno()
+    {
+        if (inventoryPanel != null)
+        {
+            inventoryPanel.SetActive(true);
+            AtualizarUI();
+        }
+    }
+
+    // Força o fecho do inventário de forma limpa
+    public void FecharInventarioExterno()
+    {
+        if (inventoryPanel != null)
+        {
+            inventoryPanel.SetActive(false);
+        }
+    }
 }
 /*using UnityEngine;
 using System.Collections.Generic;

@@ -35,6 +35,14 @@ public class FogueiraUI : MonoBehaviour
 
         // Liberta o rato para o jogador conseguir clicar!
         AtivarRato(true);
+
+        // =================================================================
+        // CHAMA O INVENTÁRIO AUTOMATICAMENTE:
+        InventoryUI invUI = Object.FindFirstObjectByType<InventoryUI>();
+        if (invUI != null)
+        {
+            invUI.AbrirInventarioExterno();
+        }
     }
     // Função auxiliar para controlar o estado do cursor
     private void AtivarRato(bool ativar)
@@ -71,6 +79,14 @@ public class FogueiraUI : MonoBehaviour
         // Se o jogador carregar em ESC para fechar a fogueira
         if (Keyboard.current.escapeKey.wasPressedThisFrame)
         {
+            // Fecha o inventário automaticamente ao sair da fogueira
+            InventoryUI invUI = Object.FindFirstObjectByType<InventoryUI>();
+            if (invUI != null)
+            {
+                invUI.FecharInventarioExterno();
+            }
+
+            AtivarRato(false);
             // Deixamos a fogueira tratar do fecho e do reset do rato centralizado
             fogueiraAtual.FecharInterfaceFogueira();
             return;

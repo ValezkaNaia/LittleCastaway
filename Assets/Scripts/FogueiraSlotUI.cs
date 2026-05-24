@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems; // OBRIGATÓRIO: Permite usar o sistema de Drag & Drop
 
 // Adicionámos ', IDropHandler' para o Unity saber que este slot aceita itens largados nele
-public class FogueiraSlotUI : MonoBehaviour, IDropHandler
+public class FogueiraSlotUI : MonoBehaviour, IDropHandler, IPointerClickHandler
 {
     public enum TipoSlotFogueira { Entrada, Saida }
     public TipoSlotFogueira tipoDeSlot;
@@ -77,6 +77,30 @@ public class FogueiraSlotUI : MonoBehaviour, IDropHandler
             else
             {
                 Debug.LogWarning("[Fogueira] Este item não pode ser cozinhado!");
+            }
+        }
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        // Se for o slot de saída e tiver lá uma carne pronta...
+        if (tipoDeSlot == TipoSlotFogueira.Saida && itemNoSlot != null)
+        {
+            InventoryManager inventory = Object.FindFirstObjectByType<InventoryManager>();
+            InventoryUI inventoryUI = Object.FindFirstObjectByType<InventoryUI>();
+
+            if (inventory != null)
+            {
+                // Adiciona diretamente ao inventário geral do jogador
+                inventory.items.Add(new ItemAcumulado(itemNoSlot, 1)); 
+                
+                // Limpa o slot da fogueira
+                DefinirItem(null);
+
+                // Atualiza o painel visual do inventário para mostrar a nova carne
+                if (inventoryUI != null) inventoryUI.AtualizarUI();
+                
+                Debug.Log($"[Recolha] {itemNoSlot.itemName} movido para o inventário!");
             }
         }
     }

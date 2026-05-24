@@ -213,6 +213,12 @@ public class PlayerInteraction : MonoBehaviour
             // CORREÇÃO CRUCIAL: Só mexe no rato se a Fogueira existir E o painel visual dela estiver aberto!
             if (fogueiraAtiva != null && fogueiraAtiva.painelFogueiraUI != null && fogueiraAtiva.painelFogueiraUI.gameObject.activeSelf)
             {
+                // NOVO: Fecha o inventário se o jogador se afastar da fogueira
+                InventoryUI invUI = Object.FindFirstObjectByType<InventoryUI>();
+                if (invUI != null)
+                {
+                    invUI.FecharInventarioExterno();
+                }
                 // Como o jogador parou de olhar/se afastou, fecha a fogueira e prende o rato
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
