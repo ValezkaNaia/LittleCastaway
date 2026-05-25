@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 8442102407427315186}
   - component: {fileID: 4109521518878556967}
   - component: {fileID: -4832847292698068023}
+  - component: {fileID: -7050198759103612920}
   m_Layer: 0
   m_Name: stone small 2
   m_TagString: Untagged
@@ -126,3 +127,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemObject
   referenciaItem: {fileID: 11400000, guid: 4c120381ba7aa35438e770a80c4a0abd, type: 2}
+--- !u!114 &-7050198759103612920
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7937773672729900071}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbb65017d86a2174d994a8d25e650b3e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ObjetoNaMao

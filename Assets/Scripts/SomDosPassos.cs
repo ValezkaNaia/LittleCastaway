@@ -37,16 +37,19 @@ public class SomDosPassos : MonoBehaviour
         {
             Debug.LogError("Erro Crítico: O script SomDosPassos não encontrou o CharacterController no Player! Arraste-o manualmente para a caixa 'Controlador' no Inspector.");
         }
-
-        posicaoAnterior = transform.position;
+        else
+        {
+            // Guarda a posição inicial exata da cápsula que se mexe
+            posicaoAnterior = controlador.transform.position;
+        }
     }
 
     void Update()
     {
         if (controlador == null) return;
 
-        // 1. CÁLCULO DE VELOCIDADE REAL (À prova de falhas)
-        Vector3 posicaoAtual = transform.position;
+        // 1. CÁLCULO DE VELOCIDADE REAL (Agora focado na cápsula que se mexe!)
+        Vector3 posicaoAtual = controlador.transform.position;
         posicaoAtual.y = 0; // Ignora subidas e quedas para o ritmo dos passos
         
         Vector3 posAnteriorSemY = posicaoAnterior;
@@ -55,11 +58,11 @@ public class SomDosPassos : MonoBehaviour
         float distanciaMovida = Vector3.Distance(posicaoAtual, posAnteriorSemY);
         float velocidadeReal = distanciaMovida / Time.deltaTime;
         
-        posicaoAnterior = transform.position; // Atualiza para o próximo frame
+        posicaoAnterior = controlador.transform.position; // Atualiza para o próximo frame
 
-        // 2. DETEÇÃO DE CHÃO MULTI-TERRENO (Cavernas de malha 3D e Terreno do Unity)
-        // Dispara um pequeno raio a partir da sola dos pés do jogador para baixo
-        Vector3 pontoDosPes = transform.position + controlador.center + (Vector3.down * (controlador.height * 0.5f));
+        // 2. DETEÇÃO DE CHÃO MULTI-TERRENO
+        // Dispara um pequeno raio a partir da sola dos pés da CÁPSULA para baixo
+        Vector3 pontoDosPes = controlador.transform.position + controlador.center + (Vector3.down * (controlador.height * 0.5f));
         bool noChao = controlador.isGrounded || Physics.Raycast(pontoDosPes + Vector3.up * 0.1f, Vector3.down, 0.4f, ~LayerMask.GetMask("Ignore Raycast"), QueryTriggerInteraction.Ignore);
 
         // 3. SISTEMA DE SALTO E ATERRAGEM

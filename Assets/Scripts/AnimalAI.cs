@@ -32,6 +32,11 @@ public class AnimalAI : MonoBehaviour
     public bool provocado = false; 
     public AnimalAI alvoDoPet = null; 
 
+    // ==========================================
+    // NOVO: VARIÁVEL PARA GUARDAR O NOME DO PET!
+    // ==========================================
+    public string nomeDoPet = "";
+
     // (O resto dos Headers mantêm-se iguais...)
     [Header("Drop de Itens")] public GameObject prefabCarneDoChao; 
     [Header("Efeitos Visuais - Geral")] public GameObject particulaMortePrefab; public float offsetAlturaParticulaMorte = 1.0f; 
@@ -111,13 +116,37 @@ public class AnimalAI : MonoBehaviour
     {
         if (tipoAnimal != Comportamento.Pet || domesticado || provocado) return;
         macasDadas++;
-        AudioManager.instance.TocarSFX("SFXEat"); // Som da maçã a ser comida!
+        
+        // =========================================================
+        // NOVO ÁUDIO: Dar Maçã ao Pet
+        if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXGivePetFood"); 
+        // =========================================================
 
         if (macasDadas >= macasParaDomesticar)
         {
-            if (Random.value <= 0.5f) { domesticado = true; if (particulaDomesticaoPrefab != null) Instantiate(particulaDomesticaoPrefab, transform.position + new Vector3(0, offsetAlturaCorações, 0), Quaternion.identity); }
+            if (Random.value <= 0.5f) 
+            { 
+                domesticado = true; 
+                
+                // =========================================================
+                // NOVO ÁUDIO: Sucesso a Domesticar!
+                if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXSucessAdopt"); 
+                // =========================================================
+                
+                if (particulaDomesticaoPrefab != null) Instantiate(particulaDomesticaoPrefab, transform.position + new Vector3(0, offsetAlturaCorações, 0), Quaternion.identity); 
+
+                // =========================================================
+                // NOVO: Chama a interface para lhe darmos um nome!
+                if (PetNamingManager.instance != null) PetNamingManager.instance.AbrirPainel(this);
+                // =========================================================
+            }
             else
             {
+                // =========================================================
+                // NOVO ÁUDIO: Falha a Domesticar (Fica Agressivo)
+                if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXFailAdopt"); 
+                // =========================================================
+
                 PlayerInteraction interactionUI = Object.FindFirstObjectByType<PlayerInteraction>();
                 if (interactionUI != null) interactionUI.MostrarMensagemEspecial("The animal didn't like the apples and got offended!", 4f); 
                 AtacarJogador(); tipoAnimal = Comportamento.Presa;

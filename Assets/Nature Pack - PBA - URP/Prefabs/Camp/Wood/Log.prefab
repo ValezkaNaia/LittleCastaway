@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 7252571404579397045}
   - component: {fileID: -3003192030138997384}
   - component: {fileID: -5460836697589209573}
+  - component: {fileID: -757772779135301038}
   m_Layer: 0
   m_Name: Log
   m_TagString: Untagged
@@ -126,3 +127,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemObject
   referenciaItem: {fileID: 11400000, guid: b483d491e8f394e4c88018bc90681806, type: 2}
+--- !u!114 &-757772779135301038
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9198236326761331808}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbb65017d86a2174d994a8d25e650b3e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ObjetoNaMao

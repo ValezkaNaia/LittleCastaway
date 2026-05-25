@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 33140295636051624}
   - component: {fileID: 23007324416866286}
   - component: {fileID: 65381257691272138}
+  - component: {fileID: 4918615895422628199}
   m_Layer: 0
   m_Name: Coconut_Halved
   m_TagString: Untagged
@@ -112,3 +113,15 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.3403814, y: 0.34038153, z: 0.17019081}
   m_Center: {x: 0, y: -0.000000022351747, z: -0.085095346}
+--- !u!114 &4918615895422628199
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1184144193266582}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbb65017d86a2174d994a8d25e650b3e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ObjetoNaMao

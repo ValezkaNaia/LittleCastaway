@@ -27,6 +27,11 @@ public class InventoryUI : MonoBehaviour
 
     void Update()
     {
+        // ==========================================================
+        // NOVO: Bloqueia o inventário se estiver a ler o jornal ou a dar nome ao pet!
+        if (NoteManager.isReading || PetNamingManager.isNaming) return;
+        // ==========================================================
+
         if (Input.GetKeyDown(KeyCode.I))
         {
             bool inverterEstado = !inventoryPanel.activeSelf;

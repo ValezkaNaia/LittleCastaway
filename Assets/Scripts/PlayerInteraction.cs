@@ -46,7 +46,10 @@ public class PlayerInteraction : MonoBehaviour
 
     void Update()
     {
-        if (NoteManager.isReading) return;
+        // ==========================================================
+        // NOVO: Impede que faças ações enquanto escreves o nome do pet!
+        if (NoteManager.isReading || PetNamingManager.isNaming) return;
+        // ==========================================================
 
         Vector3 rayOrigin = cam.position;
         Vector3 rayDirection = cam.forward;
@@ -55,15 +58,16 @@ public class PlayerInteraction : MonoBehaviour
         Debug.DrawRay(rayOrigin, rayDirection * interactionRange, Color.red);
 
         // =================================================================
-
+        bool acertouEmAlgo = Physics.SphereCast(rayOrigin, interactionRadius, rayDirection, out hit, interactionRange);
+        
         // =================================================================
-       bool acertouEmAlgo = Physics.SphereCast(rayOrigin, interactionRadius, rayDirection, out hit, interactionRange);
         // A. SISTEMA DE COMBATE (CLIQUE ESQUERDO)
         // =================================================================
         if (Cursor.lockState == CursorLockMode.Locked && Mouse.current.leftButton.wasPressedThisFrame)
         {
             // Tenta encontrar qualquer item equipado na mão (filho do jogador)
             FerramentaAtaque armaEquipada = GetComponentInChildren<FerramentaAtaque>();
+            ObjetoNaMao objetoNaMao = GetComponentInChildren<ObjetoNaMao>(); // <--- PROCURA A ETIQUETA
 
             // 1. LÓGICA DE DESTRUIÇÃO DE FLORES (Independente do item na mão)
             if (acertouEmAlgo && hit.collider.CompareTag("Flower"))
@@ -72,67 +76,67 @@ public class PlayerInteraction : MonoBehaviour
             }
 
             // ==========================================================
-            // MUDANÇA: Prioridade Total ao Item Equipado
+            // MUDANÇA: Prioridade Total ao Item Equipado (Bloqueia Socos)
             // ==========================================================
-            if (armaEquipada != null)
+            if (objetoNaMao != null || armaEquipada != null)
             {
                 // Se o jogador tem UM ITEM NA MÃO, o soco é BLOQUEADO.
-                // Apenas executamos as ações específicas do item.
+                // Apenas executamos as ações específicas se for uma arma.
 
-                // 1. É UMA LANÇA?
-                if (armaEquipada.ehLanca)
+                if (armaEquipada != null)
                 {
-                    armaEquipada.JogarAnimacaoGatilho(); 
-                    
-                    // --- ÁUDIO DA LANÇA ---
-                    if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXSpear");
-                    
-                    if (acertouEmAlgo && hit.collider.CompareTag("Animal"))
+                    // 1. É UMA LANÇA?
+                    if (armaEquipada.ehLanca)
                     {
-                        AnimalAI animal = hit.collider.GetComponent<AnimalAI>();
-                        if (animal != null && animal.vida > 0 && !(animal.tipoAnimal == AnimalAI.Comportamento.Pet && animal.domesticado))
+                        armaEquipada.JogarAnimacaoGatilho(); 
+                        
+                        // --- ÁUDIO DA LANÇA ---
+                        if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXSpear");
+                        
+                        if (acertouEmAlgo && hit.collider.CompareTag("Animal"))
                         {
-                            animal.ReceberDano(danoLanca);
-                            EspirrarSangue(animal.transform.position); 
-                            ComandarPetsParaAtacar(animal); 
+                            AnimalAI animal = hit.collider.GetComponent<AnimalAI>();
+                            if (animal != null && animal.vida > 0 && !(animal.tipoAnimal == AnimalAI.Comportamento.Pet && animal.domesticado))
+                            {
+                                animal.ReceberDano(danoLanca);
+                                EspirrarSangue(animal.transform.position); 
+                                ComandarPetsParaAtacar(animal); 
+                            }
                         }
                     }
-                }
-                // 2. É UM MACHADO?
-                else if (armaEquipada.ehMachado)
-                {
-                    armaEquipada.JogarAnimacaoGatilho(); 
-                    
-                    if (acertouEmAlgo && hit.collider.CompareTag("ArvoreMadeira"))
+                    // 2. É UM MACHADO?
+                    else if (armaEquipada.ehMachado)
                     {
-                        ArvoreMadeira arvore = hit.collider.GetComponent<ArvoreMadeira>();
-                        if (arvore != null)
+                        armaEquipada.JogarAnimacaoGatilho(); 
+                        
+                        if (acertouEmAlgo && hit.collider.CompareTag("ArvoreMadeira"))
                         {
-                            arvore.LevarMachadada();
-
-                            // --- ÁUDIO DO MACHADO ---
-                            if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXMachado");
-                            
-                            // ==============================================
-                            // NOVO: SPAWN DO VFX DE MADEIRA NO IMPACTO!
-                            // ==============================================
-                            if (vfxMadeiraPrefab != null)
+                            ArvoreMadeira arvore = hit.collider.GetComponent<ArvoreMadeira>();
+                            if (arvore != null)
                             {
-                                // Instancia o efeito no ponto exato onde o SphereCast tocou na árvore
-                                Instantiate(vfxMadeiraPrefab, hit.point, Quaternion.LookRotation(hit.normal));
+                                arvore.LevarMachadada();
+
+                                // --- ÁUDIO DO MACHADO ---
+                                if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXMachado");
+                                
+                                // ==============================================
+                                // NOVO: SPAWN DO VFX DE MADEIRA NO IMPACTO!
+                                // ==============================================
+                                if (vfxMadeiraPrefab != null)
+                                {
+                                    Instantiate(vfxMadeiraPrefab, hit.point, Quaternion.LookRotation(hit.normal));
+                                }
                             }
                         }
                     }
                 }
-                // Se for outro item (como uma maçã com FerramentaAtaque), não faz nada aqui, 
-                // mas o soco continua bloqueado.
             }
             // ==========================================================
-            // 3. LÓGICA DO SOCO (MÃOS NUAS)
+            // 3. LÓGICA DO SOCO (MÃOS TOTALMENTE VAZIAS)
             // ==========================================================
             else 
             {
-                // Esta secção SÓ corre se armaEquipada for NULL (mãos vazias)
+                // Esta secção SÓ corre se armaEquipada E objetoNaMao forem NULL (mãos vazias)
                 
                 string triggerParaUsar = proximoSocoEsquerdo ? nomeDoTriggerSocoEsquerdo : nomeDoTriggerSocoDireito;
                 if (animatorJogador != null)
@@ -158,7 +162,7 @@ public class PlayerInteraction : MonoBehaviour
         }
 
         // =================================================================
-        // B. SISTEMA DE INTERAÇÃO (TEXTOS E CRÃ) - Igual ao anterior
+        // B. SISTEMA DE INTERAÇÃO (TEXTOS E CRÃ)
         // =================================================================
         bool olhouParaAlgoInterativo = false;
 
@@ -178,6 +182,11 @@ public class PlayerInteraction : MonoBehaviour
 
                 if (Keyboard.current.fKey.wasPressedThisFrame)
                 {
+                    // =========================================================
+                    // NOVO ÁUDIO: Apanhar itens soltos (pedras, madeira, cocos, etc)
+                    if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXPickUpItems");
+                    // =========================================================
+                    
                     item.SerApanhado();
                     EsconderTexto();
                 }
@@ -228,7 +237,12 @@ public class PlayerInteraction : MonoBehaviour
                     else if (animal.tipoAnimal == AnimalAI.Comportamento.Pet && animal.domesticado)
                     {
                         olhouParaAlgoInterativo = true;
-                        DefinirTexto("Loyal Companion");
+                        
+                        // =========================================================
+                        // NOVO: MOSTRAMOS O NOME SE EXISTIR, SENÃO "Loyal Companion"
+                        string nomeParaMostrar = string.IsNullOrEmpty(animal.nomeDoPet) ? "Loyal Companion" : animal.nomeDoPet;
+                        DefinirTexto(nomeParaMostrar);
+                        // =========================================================
                     }
                     else 
                     {
@@ -273,6 +287,11 @@ public class PlayerInteraction : MonoBehaviour
 
                         if (Keyboard.current.eKey.wasPressedThisFrame)
                         {
+                            // =========================================================
+                            // NOVO ÁUDIO: Colher a fruta da árvore
+                            if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXPickUpItems");
+                            // =========================================================
+                            
                             arvoreFruta.ApanharFruta();
                             if (arvoreFruta.itemFruta != null) DefinirTexto(arvoreFruta.itemFruta.itemName + " added to inventory!");
                         }

@@ -25,6 +25,11 @@ public class NoteManager : MonoBehaviour
 
     private void Update()
     {
+        // ==========================================================
+        // NOVO: Bloqueia as teclas do Jornal se estiveres a dar nome ao Pet!
+        if (PetNamingManager.isNaming) return;
+        // ==========================================================
+
         // SE ESTIVERES A LER:
         if (painelDoJornal.activeSelf)
         {

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 5518325140690357600}
   - component: {fileID: 2446069793548861293}
   - component: {fileID: -6690566455666911080}
+  - component: {fileID: -6540341800293747621}
   m_Layer: 0
   m_Name: Spear
   m_TagString: Untagged
@@ -106,3 +107,15 @@ MonoBehaviour:
   ehMachado: 0
   ehLanca: 1
   modeloVisual: {fileID: 0}
+--- !u!114 &-6540341800293747621
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7478660572134806275}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbb65017d86a2174d994a8d25e650b3e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ObjetoNaMao

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 5868185186693776777}
   - component: {fileID: 8541934449599148355}
   - component: {fileID: -4504637749607727206}
+  - component: {fileID: -5584672441252369056}
   m_Layer: 0
   m_Name: Food_03
   m_TagString: Untagged
@@ -104,3 +105,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemObject
   referenciaItem: {fileID: 11400000, guid: ce8d8a54739c4924a8aafc2c55022a1f, type: 2}
+--- !u!114 &-5584672441252369056
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7893667134745137302}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbb65017d86a2174d994a8d25e650b3e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ObjetoNaMao
