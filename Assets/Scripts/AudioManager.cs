@@ -1,32 +1,35 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
-
-[System.Serializable]
-public class Sound
-{
-    public string nomeDoSom; // Ex: "Soco", "TigreRugido", "PegarNota"
-    public AudioClip clip;
-    [Range(0f, 1f)] public float volume = 1f;
-}
 
 public class AudioManager : MonoBehaviour
 {
     public static AudioManager instance;
 
-    [Header("Fontes de Som (Colocar AudioSources aqui)")]
-    public AudioSource musicSource; // Para a música de fundo
-    public AudioSource sfxSource;   // Para sons do jogador e UI
+    [Header("Fontes de Áudio")]
+    public AudioSource musicSource;
+    public AudioSource sfxSource;
+
+    [System.Serializable]
+    public struct SomBiblioteca
+    {
+        public string nome;
+        public AudioClip clip;
+    }
 
     [Header("Biblioteca de Efeitos Sonoros")]
-    public Sound[] efeitosSonoros;
+    public List<SomBiblioteca> efeitosSonoros = new List<SomBiblioteca>();
 
-    private void Awake()
+    private AudioClip musicaPadraoIlha;
+    private Coroutine corotinaFade;
+    private float volumeMaximoOriginal = 1.0f;
+
+    void Awake()
     {
-        // Garante que só existe um AudioManager no jogo inteiro
         if (instance == null)
         {
             instance = this;
-            DontDestroyOnLoad(gameObject); // Opcional: mantê-lo entre cenas
+            DontDestroyOnLoad(gameObject);
         }
         else
         {
@@ -34,42 +37,72 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    // ==========================================
-    // FUNÇÃO PARA TOCAR EFEITOS SONOROS (SFX)
-    // ==========================================
-    public void TocarSFX(string nome)
+    void Start()
     {
-        Sound somParaTocar = null;
-
-        // Procura na lista o som com o nome que pedimos
-        foreach (Sound s in efeitosSonoros)
+        if (musicSource != null)
         {
-            if (s.nomeDoSom == nome)
-            {
-                somParaTocar = s;
-                break;
-            }
-        }
-
-        if (somParaTocar != null)
-        {
-            sfxSource.PlayOneShot(somParaTocar.clip, somParaTocar.volume);
-        }
-        else
-        {
-            Debug.LogWarning("Som não encontrado: " + nome);
+            musicaPadraoIlha = musicSource.clip;
+            volumeMaximoOriginal = musicSource.volume;
         }
     }
 
-    // ==========================================
-    // FUNÇÃO PARA MUDAR MÚSICA DE FUNDO
-    // ==========================================
+    public void TocarSFX(string nomeSom)
+    {
+        AudioClip clip = EncontrarClip(nomeSom);
+        if (clip != null && sfxSource != null)
+        {
+            sfxSource.PlayOneShot(clip);
+        }
+    }
+
+    // Altera a música com um efeito suave de Fade Out e Fade In
     public void MudarMusicaDeFundo(AudioClip novaMusica)
     {
-        if (musicSource.clip == novaMusica) return; // Já está a tocar esta!
+        if (musicSource == null || musicSource.clip == novaMusica) return;
 
-        musicSource.Stop();
-        musicSource.clip = novaMusica;
-        musicSource.Play();
+        if (corotinaFade != null) StopCoroutine(corotinaFade);
+        corotinaFade = StartCoroutine(TransicaoMusica(novaMusica));
+    }
+
+    // Função que os animais vão chamar ao morrer para parar a música de guerra
+    public void ResetarMusicaParaNormal()
+    {
+        if (musicaPadraoIlha != null)
+        {
+            MudarMusicaDeFundo(musicaPadraoIlha);
+        }
+    }
+
+    private IEnumerator TransicaoMusica(AudioClip novoClip)
+    {
+        // Fade Out (Desaparece a música antiga)
+        while (musicSource.volume > 0)
+        {
+            musicSource.volume -= Time.deltaTime * 1.5f; // Velocidade do fade
+            yield return null;
+        }
+
+        musicSource.clip = novoClip;
+        
+        if (novoClip != null)
+        {
+            musicSource.Play();
+            // Fade In (Aparece a música nova)
+            while (musicSource.volume < volumeMaximoOriginal)
+            {
+                musicSource.volume += Time.deltaTime * 1.5f;
+                yield return null;
+            }
+        }
+        musicSource.volume = volumeMaximoOriginal;
+    }
+
+    private AudioClip EncontrarClip(string nomeSom)
+    {
+        foreach (var som in efeitosSonoros)
+        {
+            if (som.nome == nomeSom) return som.clip;
+        }
+        return null;
     }
 }

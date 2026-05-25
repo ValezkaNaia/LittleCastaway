@@ -9,6 +9,7 @@ TagManager:
   - FxTemporaire
   - ArvoreMadeira
   - ArvoreFruta
+  - Flower
   layers:
   - Default
   - TransparentFX

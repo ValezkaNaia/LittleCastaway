@@ -34,9 +34,10 @@ public class NoteManager : MonoBehaviour
                 FecharJornal();
             }
             
-            // Podes mudar de página com as setas do teclado ou com o A/D!
+            // Mudar de página com Teclado
             if (Keyboard.current.rightArrowKey.wasPressedThisFrame || Keyboard.current.dKey.wasPressedThisFrame)
                 ProximaPagina();
+            
             if (Keyboard.current.leftArrowKey.wasPressedThisFrame || Keyboard.current.aKey.wasPressedThisFrame)
                 PaginaAnterior();
         }
@@ -51,7 +52,6 @@ public class NoteManager : MonoBehaviour
         }
     }
 
-    // A folha 3D no chão chama esta função (1 Nota Simples)
     public void PickUpAndReadNote(Sprite novaNota)
     {
         if (!notasColecionadas.Contains(novaNota))
@@ -62,7 +62,6 @@ public class NoteManager : MonoBehaviour
         AbrirJornal(notasColecionadas.IndexOf(novaNota));
     }
 
-    // O Livro de Tutorial chama esta função (Múltiplas Notas)
     public void PickUpTutorial(Sprite[] paginasDoTutorial)
     {
         int indexDaPrimeiraPagina = notasColecionadas.Count;
@@ -101,6 +100,9 @@ public class NoteManager : MonoBehaviour
         {
             paginaAtual++;
             AtualizarEcra();
+            
+            // Som de virar página (Direita)
+            if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXPaper");
         }
     }
 
@@ -110,6 +112,9 @@ public class NoteManager : MonoBehaviour
         {
             paginaAtual--;
             AtualizarEcra();
+            
+            // Som de virar página (Esquerda)
+            if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXPaper");
         }
     }
 
@@ -129,15 +134,9 @@ public class NoteManager : MonoBehaviour
         Cursor.lockState = congelar ? CursorLockMode.None : CursorLockMode.Locked;
     }
 
-    // =================================================================
-    // LIGAÇÃO AO CRAFTING (VERIFICAR DESBLOQUEIOS)
-    // =================================================================
     public bool TemNota(Sprite notaProcurada)
     {
-        // Se a receita não precisa de nota (está vazio no Inspector), deixamos construir logo!
         if (notaProcurada == null) return true;
-
-        // Se precisa de nota, verifica se o sprite já está no nosso diário
         return notasColecionadas.Contains(notaProcurada);
     }
 }

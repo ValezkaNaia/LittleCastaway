@@ -87,6 +87,12 @@ public class SurvivalManager : MonoBehaviour
     private float shakeDecay = 0f;
     private float tempoUltimoDanoFome;
 
+    // =========================================================
+    // NOVO: VARIÁVEIS PARA CONTROLO DE SOM DE POUCA VIDA
+    // =========================================================
+    private bool tocandoAvisoVida = false;
+    private float limiteVidaParaAviso = 20f; 
+
     void Awake() { if (instance == null) instance = this; }
 
     void Start()
@@ -120,7 +126,7 @@ public class SurvivalManager : MonoBehaviour
         HandleStats();
         HandleStamina();
         HandleFatigue(); 
-        HandleDrowning(); // Adicionámos o afogamento aqui!
+        HandleDrowning(); 
         HandleFOVEffects();
     }
 
@@ -151,12 +157,31 @@ public class SurvivalManager : MonoBehaviour
             AplicarEfeitoDeDano(0.2f, forcaEfeito);
         }
 
+        // =========================================================
+        // NOVO: VERIFICA SE DEVE TOCAR O AVISO SONORO
+        // =========================================================
+        VerificarAvisoSonoroVida();
+
         if (currentHealth <= 0) PerderJogo();
     }
 
     public void ReceberDano(float quantidade)
     {
         DeduzirVida(quantidade, true, 1.0f);
+    }
+
+    // Método auxiliar para o som da vida
+    private void VerificarAvisoSonoroVida()
+    {
+        if (currentHealth <= limiteVidaParaAviso && !tocandoAvisoVida)
+        {
+            tocandoAvisoVida = true;
+            if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXPoucaVida");
+        }
+        else if (currentHealth > limiteVidaParaAviso && tocandoAvisoVida)
+        {
+            tocandoAvisoVida = false;
+        }
     }
 
     // =================================================================
@@ -222,6 +247,8 @@ public class SurvivalManager : MonoBehaviour
                 currentHealth += healthRegenRate * Time.deltaTime;
                 currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
                 targetGreenAlpha = 0.6f;
+                
+                VerificarAvisoSonoroVida(); // Verifica se o alarme deve parar ao curar
             }
         }
 
@@ -400,13 +427,40 @@ public class SurvivalManager : MonoBehaviour
         if (mainCamera != null) mainCamera.fieldOfView = baseFOV;
     }
 
-    public void DrinkWater(float amount) { currentThirst = Mathf.Clamp(currentThirst + amount, 0, maxThirst); ForçarAtualizacaoUI(); }
-    public void EatFood(float amount) { currentHunger = Mathf.Clamp(currentHunger + amount, 0, maxHunger); ForçarAtualizacaoUI(); }
+    // =========================================================
+    // MÉTODOS ORIGINAIS (COM SOM ADICIONADO)
+    // =========================================================
+    public void DrinkWater(float amount) 
+    { 
+        currentThirst = Mathf.Clamp(currentThirst + amount, 0, maxThirst); 
+        
+        if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXDrink");
+        
+        ForçarAtualizacaoUI(); 
+    }
+    
+    public void EatFood(float amount) 
+    { 
+        currentHunger = Mathf.Clamp(currentHunger + amount, 0, maxHunger); 
+        
+        if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXEat");
+
+        ForçarAtualizacaoUI(); 
+    }
 
     public void ReceberNutricao(float quantidade, ItemData.TipoConsumivel tipo)
     {
-        if (tipo == ItemData.TipoConsumivel.Comida) currentHunger = Mathf.Min(currentHunger + quantidade, maxHunger);
-        else if (tipo == ItemData.TipoConsumivel.Agua) currentThirst = Mathf.Min(currentThirst + quantidade, maxThirst);
+        if (tipo == ItemData.TipoConsumivel.Comida) 
+        {
+            currentHunger = Mathf.Min(currentHunger + quantidade, maxHunger);
+            if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXEat");
+        }
+        else if (tipo == ItemData.TipoConsumivel.Agua) 
+        {
+            currentThirst = Mathf.Min(currentThirst + quantidade, maxThirst);
+            if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXDrink");
+        }
+        
         ForçarAtualizacaoUI();
     }
 

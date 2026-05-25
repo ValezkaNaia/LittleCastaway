@@ -13,18 +13,35 @@ public class PlayerInteraction : MonoBehaviour
     public float danoLanca = 35f;
     public float danoSoco = 10f; 
 
+    [Header("Efeitos Visuais (VFX)")]
+    [Tooltip("Coloca aqui o Prefab do efeito de Sangue")]
+    public GameObject vfxSanguePrefab;
+    public float alturaSangueAnimal = 1.0f;
+
+    [Space(10)]
+    [Tooltip("Coloca aqui o Prefab das partículas de Madeira (Ex: WoodChips)")]
+    public GameObject vfxMadeiraPrefab; // TEU NOVO VFX AQUI!
+
     [Header("Animações")]
     public Animator animatorJogador; 
     public string nomeDoTriggerSocoEsquerdo = "PunchLeft"; 
     public string nomeDoTriggerSocoDireito = "PunchRight"; 
 
     private bool proximoSocoEsquerdo = true; 
+    private float coltdownTextoEspecial = 0f; 
 
     private Transform cam;
 
     void Start()
     {
         cam = Camera.main.transform;
+    }
+
+    // Permite que o AnimalAI envie mensagens de texto longas para a tua UI
+    public void MostrarMensagemEspecial(string msg, float duracao)
+    {
+        DefinirTexto(msg);
+        coltdownTextoEspecial = duracao;
     }
 
     void Update()
@@ -37,31 +54,38 @@ public class PlayerInteraction : MonoBehaviour
 
         Debug.DrawRay(rayOrigin, rayDirection * interactionRange, Color.red);
 
-        bool acertouEmAlgo = Physics.SphereCast(rayOrigin, interactionRadius, rayDirection, out hit, interactionRange);
+        // =================================================================
 
         // =================================================================
-        // A. SISTEMA DE COMBATE (CLIQUE ESQUERDO) - Funciona mesmo no ar!
+       bool acertouEmAlgo = Physics.SphereCast(rayOrigin, interactionRadius, rayDirection, out hit, interactionRange);
+        // A. SISTEMA DE COMBATE (CLIQUE ESQUERDO)
         // =================================================================
         if (Cursor.lockState == CursorLockMode.Locked && Mouse.current.leftButton.wasPressedThisFrame)
         {
+            // Tenta encontrar qualquer item equipado na mão (filho do jogador)
             FerramentaAtaque armaEquipada = GetComponentInChildren<FerramentaAtaque>();
 
-            // =================================================================
-            // NOVO: DESTRUIR OBJETOS FRÁGEIS (Flores, arbustos pequenos, etc)
-            // =================================================================
+            // 1. LÓGICA DE DESTRUIÇÃO DE FLORES (Independente do item na mão)
             if (acertouEmAlgo && hit.collider.CompareTag("Flower"))
             {
-                // Destrói a flor instantaneamente!
                 Destroy(hit.collider.gameObject);
             }
 
-            // Se o jogador tiver alguma ferramenta equipada nas mãos...
+            // ==========================================================
+            // MUDANÇA: Prioridade Total ao Item Equipado
+            // ==========================================================
             if (armaEquipada != null)
             {
+                // Se o jogador tem UM ITEM NA MÃO, o soco é BLOQUEADO.
+                // Apenas executamos as ações específicas do item.
+
                 // 1. É UMA LANÇA?
                 if (armaEquipada.ehLanca)
                 {
                     armaEquipada.JogarAnimacaoGatilho(); 
+                    
+                    // --- ÁUDIO DA LANÇA ---
+                    if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXSpear");
                     
                     if (acertouEmAlgo && hit.collider.CompareTag("Animal"))
                     {
@@ -69,6 +93,8 @@ public class PlayerInteraction : MonoBehaviour
                         if (animal != null && animal.vida > 0 && !(animal.tipoAnimal == AnimalAI.Comportamento.Pet && animal.domesticado))
                         {
                             animal.ReceberDano(danoLanca);
+                            EspirrarSangue(animal.transform.position); 
+                            ComandarPetsParaAtacar(animal); 
                         }
                     }
                 }
@@ -80,13 +106,34 @@ public class PlayerInteraction : MonoBehaviour
                     if (acertouEmAlgo && hit.collider.CompareTag("ArvoreMadeira"))
                     {
                         ArvoreMadeira arvore = hit.collider.GetComponent<ArvoreMadeira>();
-                        if (arvore != null) arvore.LevarMachadada();
+                        if (arvore != null)
+                        {
+                            arvore.LevarMachadada();
+
+                            // --- ÁUDIO DO MACHADO ---
+                            if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXMachado");
+                            
+                            // ==============================================
+                            // NOVO: SPAWN DO VFX DE MADEIRA NO IMPACTO!
+                            // ==============================================
+                            if (vfxMadeiraPrefab != null)
+                            {
+                                // Instancia o efeito no ponto exato onde o SphereCast tocou na árvore
+                                Instantiate(vfxMadeiraPrefab, hit.point, Quaternion.LookRotation(hit.normal));
+                            }
+                        }
                     }
                 }
+                // Se for outro item (como uma maçã com FerramentaAtaque), não faz nada aqui, 
+                // mas o soco continua bloqueado.
             }
-            // 3. MÃOS NUAS (Não tem nenhuma arma equipada) -> SOCO!
+            // ==========================================================
+            // 3. LÓGICA DO SOCO (MÃOS NUAS)
+            // ==========================================================
             else 
             {
+                // Esta secção SÓ corre se armaEquipada for NULL (mãos vazias)
+                
                 string triggerParaUsar = proximoSocoEsquerdo ? nomeDoTriggerSocoEsquerdo : nomeDoTriggerSocoDireito;
                 if (animatorJogador != null)
                 {
@@ -94,25 +141,35 @@ public class PlayerInteraction : MonoBehaviour
                 }
                 proximoSocoEsquerdo = !proximoSocoEsquerdo; 
 
+                // --- ÁUDIO DO SOCO ---
+                if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXPunch");
+
                 if (acertouEmAlgo && hit.collider.CompareTag("Animal"))
                 {
                     AnimalAI animal = hit.collider.GetComponent<AnimalAI>();
                     if (animal != null && animal.vida > 0 && !(animal.tipoAnimal == AnimalAI.Comportamento.Pet && animal.domesticado))
                     {
                         animal.ReceberDano(danoSoco);
+                        EspirrarSangue(animal.transform.position); 
+                        ComandarPetsParaAtacar(animal); 
                     }
                 }
             }
         }
 
         // =================================================================
-        // B. SISTEMA DE INTERAÇÃO (TEXTOS NO ECRÃ E TECLAS DE AÇÃO)
+        // B. SISTEMA DE INTERAÇÃO (TEXTOS E CRÃ) - Igual ao anterior
         // =================================================================
         bool olhouParaAlgoInterativo = false;
 
+        if (coltdownTextoEspecial > 0)
+        {
+            coltdownTextoEspecial -= Time.deltaTime;
+            olhouParaAlgoInterativo = true;
+        }
+
         if (acertouEmAlgo)
         {
-            // 1. APANHAR ITENS DO CHÃO
             ItemObject item = hit.collider.GetComponent<ItemObject>();
             if (item != null && hit.collider.gameObject != gameObject)
             {
@@ -125,8 +182,6 @@ public class PlayerInteraction : MonoBehaviour
                     EsconderTexto();
                 }
             }
-
-            // 2. LER NOTAS NORMAIS
             else if (hit.collider.GetComponent<WorldNote>() != null)
             {
                 WorldNote nota = hit.collider.GetComponent<WorldNote>();
@@ -135,12 +190,13 @@ public class PlayerInteraction : MonoBehaviour
 
                 if (Keyboard.current.fKey.wasPressedThisFrame)
                 {
+                    // --- ÁUDIO DAS NOTAS ---
+                    if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXPaper");
+
                     nota.LerNota();
                     EsconderTexto();
                 }
             }
-
-            // 2.5 LER GUIA DE TUTORIAL
             else if (hit.collider.GetComponent<TutorialItem>() != null)
             {
                 TutorialItem tutorial = hit.collider.GetComponent<TutorialItem>();
@@ -149,12 +205,13 @@ public class PlayerInteraction : MonoBehaviour
 
                 if (Keyboard.current.fKey.wasPressedThisFrame)
                 {
+                    // --- ÁUDIO DAS NOTAS (TUTORIAL) ---
+                    if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXPaper");
+
                     tutorial.ApanharLivro();
                     EsconderTexto();
                 }
             }
-
-            // 3. OLHAR PARA ANIMAIS
             else if (hit.collider.CompareTag("Animal"))
             {
                 AnimalAI animal = hit.collider.GetComponent<AnimalAI>();
@@ -166,10 +223,7 @@ public class PlayerInteraction : MonoBehaviour
                         int applesLeft = 5 - animal.macasDadas;
                         DefinirTexto("Press [F] to Give Apple (" + applesLeft + " more needed)");
 
-                        if (Keyboard.current.fKey.wasPressedThisFrame)
-                        {
-                            animal.TentarDomesticar();
-                        }
+                        if (Keyboard.current.fKey.wasPressedThisFrame) animal.TentarDomesticar();
                     }
                     else if (animal.tipoAnimal == AnimalAI.Comportamento.Pet && animal.domesticado)
                     {
@@ -178,14 +232,14 @@ public class PlayerInteraction : MonoBehaviour
                     }
                     else 
                     {
-                        FerramentaAtaque armaEquipada = GetComponentInChildren<FerramentaAtaque>();
+                        FerramentaAtaque armaEquipadaUI = GetComponentInChildren<FerramentaAtaque>();
                         
-                        if (armaEquipada == null) 
+                        if (armaEquipadaUI == null) 
                         {
                             olhouParaAlgoInterativo = true;
                             DefinirTexto("Punch [Left Click]");
                         }
-                        else if (armaEquipada.ehLanca) 
+                        else if (armaEquipadaUI.ehLanca) 
                         {
                             olhouParaAlgoInterativo = true;
                             DefinirTexto("Attack with Spear [Left Click]");
@@ -193,31 +247,26 @@ public class PlayerInteraction : MonoBehaviour
                     }
                 }
             }
-
-            // 4. OLHAR PARA ÁRVORES DE MADEIRA
             else if (hit.collider.CompareTag("ArvoreMadeira"))
             {
                 ArvoreMadeira arvore = hit.collider.GetComponent<ArvoreMadeira>();
                 if (arvore != null)
                 {
-                    FerramentaAtaque armaEquipada = GetComponentInChildren<FerramentaAtaque>();
+                    FerramentaAtaque armaEquipadaUI = GetComponentInChildren<FerramentaAtaque>();
 
-                    if (armaEquipada != null && armaEquipada.ehMachado)
+                    if (armaEquipadaUI != null && armaEquipadaUI.ehMachado)
                     {
                         olhouParaAlgoInterativo = true;
                         DefinirTexto("Chop Tree [Left Click]");
                     }
                 }
             }
-
-            // 5. APANHAR FRUTA DAS ÁRVORES
             else if (hit.collider.CompareTag("ArvoreFruta"))
             {
                 ArvoreFruta arvoreFruta = hit.collider.GetComponent<ArvoreFruta>();
                 if (arvoreFruta != null)
                 {
                     olhouParaAlgoInterativo = true;
-
                     if (arvoreFruta.TemFruta())
                     {
                         DefinirTexto("Press [E] to Harvest Fruit");
@@ -225,11 +274,7 @@ public class PlayerInteraction : MonoBehaviour
                         if (Keyboard.current.eKey.wasPressedThisFrame)
                         {
                             arvoreFruta.ApanharFruta();
-                            
-                            if (arvoreFruta.itemFruta != null)
-                            {
-                                DefinirTexto(arvoreFruta.itemFruta.itemName + " added to inventory!");
-                            }
+                            if (arvoreFruta.itemFruta != null) DefinirTexto(arvoreFruta.itemFruta.itemName + " added to inventory!");
                         }
                     }
                     else
@@ -238,8 +283,6 @@ public class PlayerInteraction : MonoBehaviour
                     }
                 }
             }
-
-            // 6. INTERAGIR COM A FOGUEIRA
             else if (hit.collider.GetComponent<Fogueira>() != null)
             {
                 Fogueira fogueira = hit.collider.GetComponent<Fogueira>();
@@ -268,39 +311,53 @@ public class PlayerInteraction : MonoBehaviour
             EsconderTexto();
 
             Fogueira fogueiraAtiva = Object.FindFirstObjectByType<Fogueira>();
-            
             if (fogueiraAtiva != null && fogueiraAtiva.painelFogueiraUI != null && fogueiraAtiva.painelFogueiraUI.gameObject.activeSelf)
             {
                 InventoryUI invUI = Object.FindFirstObjectByType<InventoryUI>();
-                if (invUI != null)
-                {
-                    invUI.FecharInventarioExterno();
-                }
+                if (invUI != null) invUI.FecharInventarioExterno();
+                
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
-                
                 fogueiraAtiva.FecharInterfaceFogueira();
             }
         }
     }
 
-    void DefinirTexto(string texto)
+    void EspirrarSangue(Vector3 posicaoAnimal)
     {
-        if (textoInteracao != null)
+        if (vfxSanguePrefab != null)
         {
-            textoInteracao.text = texto;
-            textoInteracao.gameObject.SetActive(true);
+            Vector3 posicaoSpawn = posicaoAnimal + new Vector3(0, alturaSangueAnimal, 0);
+            Instantiate(vfxSanguePrefab, posicaoSpawn, Quaternion.identity);
         }
     }
 
-    void EsconderTexto()
+    void ComandarPetsParaAtacar(AnimalAI inimigo)
     {
-        if (textoInteracao != null)
+        AnimalAI[] todosAnimais = Object.FindObjectsByType<AnimalAI>(FindObjectsSortMode.None);
+        foreach (AnimalAI pet in todosAnimais)
         {
-            textoInteracao.gameObject.SetActive(false);
+            pet.DefinirAlvoParaPet(inimigo);
         }
     }
 
+    void DefinirTexto(string texto) 
+    { 
+        if (textoInteracao != null) 
+        { 
+            textoInteracao.text = texto; 
+            textoInteracao.gameObject.SetActive(true); 
+        } 
+    }
+    
+    void EsconderTexto() 
+    { 
+        if (textoInteracao != null) 
+        { 
+            textoInteracao.gameObject.SetActive(false); 
+        } 
+    }
+    
     void OnDrawGizmosSelected()
     {
         if (cam != null)

@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[RequireComponent(typeof(AudioSource))] // NOVO: Garante que a fogueira tem emissor de som
 public class Fogueira : MonoBehaviour
 {
     [Header("Configurações do Fogo")]
@@ -12,8 +13,21 @@ public class Fogueira : MonoBehaviour
     [Header("Configurações de UI")]
     public FogueiraUI painelFogueiraUI; // O teu FireplacePanel
 
+    // NOVO: Variável para o som
+    private AudioSource somFogueira;
+
     void Start()
     {
+        // ==============================================================
+        // NOVO: CONFIGURAÇÃO DE ÁUDIO 3D DA FOGUEIRA
+        // ==============================================================
+        somFogueira = GetComponent<AudioSource>();
+        somFogueira.spatialBlend = 1.0f; // 1 = Totalmente 3D
+        somFogueira.maxDistance = 15f;   // Deixa de ouvir a 15 metros
+        somFogueira.rolloffMode = AudioRolloffMode.Linear;
+        somFogueira.loop = true; // O fogo crepita infinitamente enquanto está aceso
+        // ==============================================================
+
         // Se a variável estiver vazia, faz uma busca inteligente pelos filhos do Canvas
         if (painelFogueiraUI == null)
         {
@@ -45,7 +59,7 @@ public class Fogueira : MonoBehaviour
         {
             tempoRestante -= Time.deltaTime;
             
-            // ADICIONA ISTO: Atualiza o texto visual da UI enquanto o tempo corre!
+            // Atualiza o texto visual da UI enquanto o tempo corre!
             if (painelFogueiraUI != null && painelFogueiraUI.gameObject.activeSelf)
             {
                 // Aqui chamamos o método que atualiza os textos e o tempo da UI
@@ -79,6 +93,9 @@ public class Fogueira : MonoBehaviour
             {
                 efeitoFogoPrefab.SetActive(true);
             }
+
+            // NOVO: LIGA O SOM DA FOGUEIRA
+            if (!somFogueira.isPlaying) somFogueira.Play();
             
             Debug.Log("A fogueira foi acesa!");
         }
@@ -89,6 +106,9 @@ public class Fogueira : MonoBehaviour
         estaAcesa = false;
         tempoRestante = 0f;
         if (efeitoFogoPrefab != null) efeitoFogoPrefab.SetActive(false);
+        
+        // NOVO: DESLIGA O SOM DA FOGUEIRA
+        if (somFogueira.isPlaying) somFogueira.Stop();
         
         // Se a fogueira apagar com a UI aberta, atualiza os botões instantaneamente
         FogueiraUI uiControlador = Object.FindFirstObjectByType<FogueiraUI>();
