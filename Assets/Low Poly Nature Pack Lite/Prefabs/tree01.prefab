@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 7791307944161893095}
   - component: {fileID: 7890120355922877761}
   - component: {fileID: 7430232855962569555}
+  - component: {fileID: -8188012273485889899}
   m_Layer: 0
   m_Name: tree01
   m_TagString: Untagged
@@ -114,3 +115,18 @@ CapsuleCollider:
   m_Height: 4.214428
   m_Direction: 1
   m_Center: {x: -0.028442383, y: 2.107214, z: 0.07275444}
+--- !u!114 &-8188012273485889899
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2303205053959840659}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a5ce7773448ae9449ce445364ae3148, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ArvoreMadeira
+  batidasParaCair: 3
+  itemMadeira: {fileID: 11400000, guid: b483d491e8f394e4c88018bc90681806, type: 2}
+  prefabParticulasVerdes: {fileID: 1599718021928974, guid: 21461e6c060baf044ac3e717ed4170cb, type: 3}
