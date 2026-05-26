@@ -184,11 +184,30 @@ public class FogueiraUI : MonoBehaviour
         {
             ItemData alimentoPronto = alimentoCru.itemCozinhado;
 
-
+            // 1. Esvazia o slot de entrada (consumiu a carne crua)
             slotEntrada.DefinirItem(null);
+            
+            // 2. Define visualmente o item no slot de saída da fogueira
             slotSaida.DefinirItem(alimentoPronto);
 
-            Debug.Log($"[Culinária] {alimentoCru.itemName} transformado em {alimentoPronto.itemName}!");
+            // ====================================================================
+            // CORREÇÃO: Envia o item cozinhado para o sistema de stock do Inventário!
+            // ====================================================================
+            if (inventoryManager != null)
+            {
+                // Usa a tua função de menu para não poluir a hotbar do jogador
+                inventoryManager.AddItemDoMenu(alimentoPronto); 
+            }
+
+            // Força a UI do Inventário Geral a redesenhar as quantidades e slots na hora
+            InventoryUI invUI = Object.FindFirstObjectByType<InventoryUI>();
+            if (invUI != null) invUI.AtualizarUI();
+            // ====================================================================
+
+            Debug.Log($"[Culinária] {alimentoCru.itemName} transformado em {alimentoPronto.itemName} e guardado no stock!");
+            
+            // Atualiza os botões da fogueira
+            AtualizarEstadoDaUI();
         }
     }
 

@@ -97,16 +97,83 @@ public class AnimalAI : MonoBehaviour
         float distanciaProPlayer = Vector3.Distance(transform.position, player.position);
 
         if (tipoAnimal == Comportamento.Presa) { if (distanciaProPlayer < distanciaDetecao) FogirDoPlayer(); }
+        
+        // ======================================================================================
+        // LÓGICA DO PREDADOR ALTERADA: SISTEMA DE PRIORIDADE DE ALVOS
+        // ======================================================================================
         else if (tipoAnimal == Comportamento.Predador)
         {
-            Transform alvoAtual = null; float menorDistancia = distanciaDetecao;
-            if (distanciaProPlayer < menorDistancia) { alvoAtual = player; menorDistancia = distanciaProPlayer; }
+            Transform alvoFinal = null;
+            float menorDistanciaAlvo = distanciaDetecao;
+            bool encontrouPetDomesticado = false;
 
+            // 1. Procurar primeiro por Pets Domesticados na área de deteção
             AnimalAI[] todosAnimais = Object.FindObjectsByType<AnimalAI>(FindObjectsSortMode.None);
-            foreach (AnimalAI outroAnimal in todosAnimais) { if (outroAnimal != this && outroAnimal.vida > 0 && (outroAnimal.tipoAnimal == Comportamento.Presa || outroAnimal.tipoAnimal == Comportamento.Predador || (outroAnimal.tipoAnimal == Comportamento.Pet && !outroAnimal.domesticado))) { float dist = Vector3.Distance(transform.position, outroAnimal.transform.position); if (dist < menorDistancia) { alvoAtual = outroAnimal.transform; menorDistancia = dist; } } }
+            foreach (AnimalAI outroAnimal in todosAnimais)
+            {
+                if (outroAnimal != this && outroAnimal.vida > 0 && outroAnimal.tipoAnimal == Comportamento.Pet && outroAnimal.domesticado)
+                {
+                    float dist = Vector3.Distance(transform.position, outroAnimal.transform.position);
+                    if (dist < menorDistanciaAlvo)
+                    {
+                        alvoFinal = outroAnimal.transform;
+                        menorDistanciaAlvo = dist;
+                        encontrouPetDomesticado = true; // Marcamos que encontrámos um pet alvo prioritário
+                    }
+                }
+            }
 
-            if (alvoAtual != null) { agente.SetDestination(alvoAtual.position); if (menorDistancia <= 2f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques) { if (alvoAtual == player) AtacarJogador(); else AtacarOutroAnimal(alvoAtual.GetComponent<AnimalAI>()); } }
+            // 2. Se NÃO encontrou nenhum pet domesticado por perto, verifica se o Jogador está no raio
+            if (!encontrouPetDomesticado)
+            {
+                if (distanciaProPlayer < menorDistanciaAlvo)
+                {
+                    alvoFinal = player;
+                    menorDistanciaAlvo = distanciaProPlayer;
+                }
+                // 3. Se o jogador também não estiver no raio, caça outros animais selvagens (Presas/Outros)
+                else
+                {
+                    foreach (AnimalAI outroAnimal in todosAnimais)
+                    {
+                        if (outroAnimal != this && outroAnimal.vida > 0)
+                        {
+                            // Ignora pets domesticados aqui porque já foram validados acima
+                            if (outroAnimal.tipoAnimal == Comportamento.Presa || 
+                                outroAnimal.tipoAnimal == Comportamento.Predador || 
+                                (outroAnimal.tipoAnimal == Comportamento.Pet && !outroAnimal.domesticado))
+                            {
+                                float dist = Vector3.Distance(transform.position, outroAnimal.transform.position);
+                                if (dist < menorDistanciaAlvo)
+                                {
+                                    alvoFinal = outroAnimal.transform;
+                                    menorDistanciaAlvo = dist;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 4. Executa a movimentação e o ataque baseado no alvo escolhido pela prioridade
+            if (alvoFinal != null)
+            {
+                agente.SetDestination(alvoFinal.position);
+                if (menorDistanciaAlvo <= 2f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques)
+                {
+                    if (alvoFinal == player)
+                    {
+                        AtacarJogador();
+                    }
+                    else
+                    {
+                        AtacarOutroAnimal(alvoFinal.GetComponent<AnimalAI>());
+                    }
+                }
+            }
         }
+        // ======================================================================================
+        
         else if (tipoAnimal == Comportamento.Pet && provocado) { if (distanciaProPlayer < distanciaDetecao) { agente.SetDestination(player.position); if (distanciaProPlayer <= 2f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques) AtacarJogador(); } }
     }
 
@@ -115,6 +182,39 @@ public class AnimalAI : MonoBehaviour
     public void TentarDomesticar()
     {
         if (tipoAnimal != Comportamento.Pet || domesticado || provocado) return;
+
+        // 1. Procura qual é o item que o jogador está a segurar na mão neste momento
+        if (HotbarManager.instance != null)
+        {
+            ItemData itemNaMao = HotbarManager.instance.GetItemSelecionado();
+
+            // SEGURANÇA: Só avança se o item na mão for realmente uma maçã (ou comida/consumível)
+            if (itemNaMao != null && itemNaMao.isConsumable)
+            {
+                // ==========================================================
+                // CORREÇÃO AQUI: Remove efetivamente 1 unidade do inventário real!
+                // ==========================================================
+                InventoryManager invManager = Object.FindFirstObjectByType<InventoryManager>();
+                if (invManager != null)
+                {
+                    invManager.RemoveItem(itemNaMao); // <--- Isto tira a maçã do stock lógico
+                }
+
+                // Avisa a Hotbar para verificar se o stock zerou e atualizar a mão/slot
+                HotbarManager.instance.RemoverItemGasto(itemNaMao);
+                
+                // Atualiza a parte visual do inventário geral caso ele esteja aberto
+                InventoryUI invUI = Object.FindFirstObjectByType<InventoryUI>();
+                if (invUI != null) invUI.AtualizarUI();
+            }
+            else
+            {
+                Debug.LogWarning("Não podes domesticar o animal sem comida adequada na mão!");
+                return; // Aborta a domesticação se a mão estiver vazia ou com uma ferramenta
+            }
+        }
+
+        // 2. Continua a lógica original de contagem de domesticação
         macasDadas++;
         
         // =========================================================
