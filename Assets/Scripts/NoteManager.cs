@@ -26,8 +26,8 @@ public class NoteManager : MonoBehaviour
     private void Update()
     {
         // ==========================================================
-        // NOVO: Bloqueia as teclas do Jornal se estiveres a dar nome ao Pet!
-        if (PetNamingManager.isNaming) return;
+        // NOVO: Bloqueia as teclas do Jornal se estiveres a dar nome ao Pet ou no MENU DE PAUSA!
+        if (PetNamingManager.isNaming || MenuPausaManager.isPaused) return;
         // ==========================================================
 
         // SE ESTIVERES A LER:

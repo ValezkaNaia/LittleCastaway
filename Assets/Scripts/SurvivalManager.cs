@@ -53,6 +53,14 @@ public class SurvivalManager : MonoBehaviour
     public TextMeshProUGUI textoSonoUI;
     public float horasParaDesmaiar = 36f; 
     public float danoPorDesmaio = 20f;
+    
+    // =========================================================
+    // NOVO: Custos de usar a cama/fogueira para dormir
+    // =========================================================
+    [Tooltip("Quanto é que a fome desce ao dormir numa tenda?")]
+    public float custoFomePorDormir = 35f; 
+    [Tooltip("Quanto é que a sede desce ao dormir numa tenda?")]
+    public float custoSedePorDormir = 45f;
 
     [Header("Sistema de Afogamento")]
     [Tooltip("Abaixo de que altura (Y) a CABEÇA (Câmara) tem de estar para afogar?")]
@@ -87,9 +95,7 @@ public class SurvivalManager : MonoBehaviour
     private float shakeDecay = 0f;
     private float tempoUltimoDanoFome;
 
-    // =========================================================
-    // NOVO: VARIÁVEIS PARA CONTROLO DE SOM DE POUCA VIDA
-    // =========================================================
+    // Variáveis para som
     private bool tocandoAvisoVida = false;
     private float limiteVidaParaAviso = 20f; 
 
@@ -157,9 +163,6 @@ public class SurvivalManager : MonoBehaviour
             AplicarEfeitoDeDano(0.2f, forcaEfeito);
         }
 
-        // =========================================================
-        // NOVO: VERIFICA SE DEVE TOCAR O AVISO SONORO
-        // =========================================================
         VerificarAvisoSonoroVida();
 
         if (currentHealth <= 0) PerderJogo();
@@ -170,7 +173,6 @@ public class SurvivalManager : MonoBehaviour
         DeduzirVida(quantidade, true, 1.0f);
     }
 
-    // Método auxiliar para o som da vida
     private void VerificarAvisoSonoroVida()
     {
         if (currentHealth <= limiteVidaParaAviso && !tocandoAvisoVida)
@@ -185,13 +187,12 @@ public class SurvivalManager : MonoBehaviour
     }
 
     // =================================================================
-    // AFOGAMENTO (Controlado pela Cabeça / Câmara)
+    // AFOGAMENTO
     // =================================================================
     void HandleDrowning()
     {
         if (mainCamera == null) return;
 
-        // Se a CÂMARA descer abaixo do nível do mar, começa a sufocar
         if (mainCamera.transform.position.y <= alturaDoMar)
         {
             tempoNaAgua += Time.deltaTime;
@@ -202,7 +203,6 @@ public class SurvivalManager : MonoBehaviour
 
                 if (cronometroDano >= intervaloEntreDanos)
                 {
-                    // Tira vida, abana a câmara forte e pisca o sangue!
                     DeduzirVida(danoPorGole, true, 1.2f);
                     cronometroDano = 0f;
                 }
@@ -210,14 +210,13 @@ public class SurvivalManager : MonoBehaviour
         }
         else
         {
-            // Tirou a cabeça da água, respira fundo!
             tempoNaAgua = 0f;
             cronometroDano = 0f;
         }
     }
 
     // =================================================================
-    // RESTANTES MÉTODOS
+    // GESTÃO DE ATRIBUTOS
     // =================================================================
     void HandleStats()
     {
@@ -248,7 +247,7 @@ public class SurvivalManager : MonoBehaviour
                 currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
                 targetGreenAlpha = 0.6f;
                 
-                VerificarAvisoSonoroVida(); // Verifica se o alarme deve parar ao curar
+                VerificarAvisoSonoroVida(); 
             }
         }
 
@@ -364,6 +363,9 @@ public class SurvivalManager : MonoBehaviour
         }
     }
 
+    // =================================================================
+    // SISTEMA DE FADIGA E SONO
+    // =================================================================
     void HandleFatigue()
     {
         float inGameHoursPerRealSecond = 24f / dayDurationInRealSeconds;
@@ -384,7 +386,16 @@ public class SurvivalManager : MonoBehaviour
     {
         currentFatigue = 0f; 
         if (textoSonoUI != null) textoSonoUI.text = "You were so exhausted that you passed out...";
-        StartCoroutine(RotinaSono(true));
+        StartCoroutine(RotinaSono(true)); // Passamos TRUE porque desmaiou!
+    }
+
+    // =========================================================
+    // NOVO: Chamada pública para quando interages com a Tenda
+    // =========================================================
+    public void DormirNaTenda()
+    {
+        if (textoSonoUI != null) textoSonoUI.text = "Resting...";
+        StartCoroutine(RotinaSono(false)); // Passamos FALSE porque foi escolha do jogador!
     }
 
     private IEnumerator RotinaSono(bool foiForçado)
@@ -398,6 +409,8 @@ public class SurvivalManager : MonoBehaviour
             painelEcraPreto.SetActive(true);
             cg.alpha = 0f; 
         }
+        
+        // FADE IN PRETO
         float t = 0f;
         while (t < 1.0f)
         {
@@ -405,10 +418,34 @@ public class SurvivalManager : MonoBehaviour
             if (cg != null) cg.alpha = Mathf.Clamp01(t);
             yield return null;
         }
-        if (foiForçado) DeduzirVida(danoPorDesmaio, true, 0.5f); 
+
+        // ==============================================================
+        // LÓGICA DO SONO (Aqui distinguimos desmaio de dormir na tenda)
+        // ==============================================================
+        if (foiForçado) 
+        {
+            DeduzirVida(danoPorDesmaio, true, 0.5f); 
+        }
+        else 
+        {
+            // O jogador dormiu voluntariamente na tenda!
+            currentHealth = maxHealth; // Cura tudo
+            currentHunger -= custoFomePorDormir; // Tira Fome
+            currentThirst -= custoSedePorDormir; // Tira Sede
+            
+            // Segurança
+            if (currentHunger < 0) currentHunger = 0;
+            if (currentThirst < 0) currentThirst = 0;
+            
+            ForçarAtualizacaoUI();
+        }
+
         yield return new WaitForSecondsRealtime(3.0f);
+        
         AvancarTempo(8f);
         ResetarCansaco();
+        
+        // FADE OUT PRETO
         t = 1f;
         while (t > 0f)
         {
@@ -416,6 +453,7 @@ public class SurvivalManager : MonoBehaviour
             if (cg != null) cg.alpha = Mathf.Clamp01(t);
             yield return null;
         }
+        
         if (painelEcraPreto != null) painelEcraPreto.SetActive(false);
         estaADormir = false;
     }
@@ -428,23 +466,19 @@ public class SurvivalManager : MonoBehaviour
     }
 
     // =========================================================
-    // MÉTODOS ORIGINAIS (COM SOM ADICIONADO)
+    // COMER E BEBER
     // =========================================================
     public void DrinkWater(float amount) 
     { 
         currentThirst = Mathf.Clamp(currentThirst + amount, 0, maxThirst); 
-        
         if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXDrink");
-        
         ForçarAtualizacaoUI(); 
     }
     
     public void EatFood(float amount) 
     { 
         currentHunger = Mathf.Clamp(currentHunger + amount, 0, maxHunger); 
-        
         if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXEat");
-
         ForçarAtualizacaoUI(); 
     }
 
@@ -460,7 +494,6 @@ public class SurvivalManager : MonoBehaviour
             currentThirst = Mathf.Min(currentThirst + quantidade, maxThirst);
             if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXDrink");
         }
-        
         ForçarAtualizacaoUI();
     }
 

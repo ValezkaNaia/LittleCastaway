@@ -11,14 +11,12 @@ public class TendaScript : MonoBehaviour
     
     [Header("Arraste os objetos aqui:")]
     public GameObject interactionUI;
+    [Tooltip("Já não é necessário, o Survival Manager agora trata do Ecrã Preto! Podes deixar aqui para não dar erro.")]
     public Image fadeImage;
 
     [Header("Sistema de Avisos")]
     public TextMeshProUGUI avisoTexto; 
     public string mensagemCedo = "It's too early to sleep! You can only rest after 19:00.";
-
-    [Header("Configurações")]
-    public float tempoFade = 1.0f;
 
     private Coroutine avisoCoroutine; 
 
@@ -33,10 +31,20 @@ public class TendaScript : MonoBehaviour
         {
             SurvivalManager survival = SurvivalManager.instance;
 
+            // Verifica se está na hora de dormir (depois das 19h ou antes das 6h)
             if (survival.currentTimeInGameHours >= 19f || survival.currentTimeInGameHours < 6f)
             {
                 if (avisoTexto != null) avisoTexto.gameObject.SetActive(false);
-                StartCoroutine(SequenciaDormir(survival));
+                if (interactionUI != null) interactionUI.SetActive(false);
+                
+                // 1. CHAMA A NOVA FUNÇÃO DO SURVIVAL MANAGER (Cura, Fome, Sede e Ecrã Preto)
+                survival.DormirNaTenda();
+
+                // 2. GRAVA O JOGO (Mantive a tua lógica de save intacta!)
+                string cenaAtual = SceneManager.GetActiveScene().name;
+                PlayerPrefs.SetString("CenaGuardada", cenaAtual);
+                PlayerPrefs.Save();
+                Debug.Log("Game saved successfully (Scene: " + cenaAtual + ")!");
             }
             else
             {
@@ -58,48 +66,6 @@ public class TendaScript : MonoBehaviour
         avisoTexto.gameObject.SetActive(true);
         yield return new WaitForSeconds(3f);
         avisoTexto.gameObject.SetActive(false);
-    }
-
-    IEnumerator SequenciaDormir(SurvivalManager survival)
-    {
-        if (fadeImage == null) yield break;
-
-        playerPerto = false;
-        if (interactionUI != null) interactionUI.SetActive(false);
-        fadeImage.gameObject.SetActive(true);
-
-        float t = 0;
-        while (t < 1.0f)
-        {
-            t += Time.deltaTime / tempoFade;
-            fadeImage.color = new Color(0, 0, 0, Mathf.Clamp01(t));
-            yield return null;
-        }
-
-        yield return new WaitForSeconds(1.0f);
-
-        if (survival != null)
-        {
-            survival.AvancarTempo(8f); 
-            survival.ResetarCansaco(); 
-        }
-
-        string cenaAtual = SceneManager.GetActiveScene().name;
-        PlayerPrefs.SetString("CenaGuardada", cenaAtual);
-        PlayerPrefs.Save();
-        Debug.Log("Game saved successfully (Scene: " + cenaAtual + ")!");
-
-        yield return new WaitForSeconds(1.0f);
-
-        while (t > 0f)
-        {
-            t -= Time.deltaTime / tempoFade;
-            fadeImage.color = new Color(0, 0, 0, Mathf.Clamp01(t));
-            yield return null;
-        }
-
-        fadeImage.gameObject.SetActive(false);
-        playerPerto = true;
     }
 
     private void OnTriggerEnter(Collider other)

@@ -28,8 +28,8 @@ public class InventoryUI : MonoBehaviour
     void Update()
     {
         // ==========================================================
-        // NOVO: Bloqueia o inventário se estiver a ler o jornal ou a dar nome ao pet!
-        if (NoteManager.isReading || PetNamingManager.isNaming) return;
+        // NOVO: Bloqueia o inventário se estiver a ler o jornal, a dar nome ao pet ou no MENU DE PAUSA!
+        if (NoteManager.isReading || PetNamingManager.isNaming || MenuPausaManager.isPaused) return;
         // ==========================================================
 
         if (Input.GetKeyDown(KeyCode.I))

@@ -47,8 +47,8 @@ public class PlayerInteraction : MonoBehaviour
     void Update()
     {
         // ==========================================================
-        // NOVO: Impede que faças ações enquanto escreves o nome do pet!
-        if (NoteManager.isReading || PetNamingManager.isNaming) return;
+        // NOVO: Impede ações ao ler, ao dar nome aos pets, ou no MENU DE PAUSA!
+        if (NoteManager.isReading || PetNamingManager.isNaming || MenuPausaManager.isPaused) return;
         // ==========================================================
 
         Vector3 rayOrigin = cam.position;

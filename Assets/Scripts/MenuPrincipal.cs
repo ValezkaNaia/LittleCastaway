@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Collections;
+using UnityEngine.UI; // Adicionado para podermos mexer em Botões
 
 public class MenuPrincipal : MonoBehaviour
 {
@@ -12,6 +13,10 @@ public class MenuPrincipal : MonoBehaviour
     public CanvasGroup grupoBotoesIniciais;
     public CanvasGroup grupoOpcoes;
     
+    // NOVO: Referência para o Botão de Continuar
+    [Tooltip("Arrasta para aqui o teu botão de Continuar da interface")]
+    public Button botaoContinuar; 
+    
     // 1. AGORA TEMOS DUAS VELOCIDADES DIFERENTES!
     public float velocidadeFadeIniciais = 1.5f; // Lento para o ecrã inicial
     public float velocidadeFadeOpcoes = 0.3f;   // Muito rápido (0.3s) para as opções
@@ -19,6 +24,14 @@ public class MenuPrincipal : MonoBehaviour
 
     void Start()
     {
+        // =========================================================
+        // NOVO: Desativa o botão "Continue" se não houver save!
+        if (botaoContinuar != null)
+        {
+            botaoContinuar.interactable = PlayerPrefs.HasKey("CenaGuardada");
+        }
+        // =========================================================
+
         if (grupoBotoesIniciais != null)
         {
             grupoBotoesIniciais.alpha = 0f;
