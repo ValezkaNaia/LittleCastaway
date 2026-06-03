@@ -11,6 +11,7 @@ public class AnimalAI : MonoBehaviour
     [Header("Configurações Principais")]
     public Comportamento tipoAnimal;
     public float vida = 100f;
+    private float vidaMaxima; // NOVO: Guarda a vida inicial para poder curar tudo!
     public float distanciaDetecao = 15f;
     public bool darCarneAoMorrer = true;
 
@@ -50,6 +51,9 @@ public class AnimalAI : MonoBehaviour
         agente = GetComponent<NavMeshAgent>();
         anim = GetComponent<Animator>();
         emissorAudio = GetComponent<AudioSource>(); 
+        
+        // Guarda a vida inicial definida no inspector para recuperar mais tarde
+        vidaMaxima = vida; 
         
         emissorAudio.spatialBlend = 1.0f; 
         emissorAudio.maxDistance = 25f;   
@@ -97,7 +101,7 @@ public class AnimalAI : MonoBehaviour
                 if (Vector3.Distance(transform.position, player.position) > 4f) agente.SetDestination(player.position); 
                 else agente.ResetPath(); 
             }
-            return; // Bloqueia resto do script para não o confundir com outros animais
+            return; 
         }
 
         // ======================================================================================
@@ -106,7 +110,7 @@ public class AnimalAI : MonoBehaviour
         if (tipoAnimal == Comportamento.Presa) 
         { 
             if (distanciaProPlayer < distanciaDetecao) FogirDoPlayer(); 
-            return; // Bloqueia aqui! Assim as galinhas nunca tentam "atacar".
+            return; 
         }
         
         // ======================================================================================
@@ -169,13 +173,16 @@ public class AnimalAI : MonoBehaviour
             if (alvoFinal != null)
             {
                 agente.SetDestination(alvoFinal.position);
-                if (menorDistanciaAlvo <= 2f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques)
+                
+                // CORREÇÃO AQUI: Mede a distância real em vez da distância de deteção guardada
+                float distanciaAtual = Vector3.Distance(transform.position, alvoFinal.position);
+                if (distanciaAtual <= 2.5f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques)
                 {
                     if (alvoFinal == player) AtacarJogador();
                     else AtacarOutroAnimal(alvoFinal.GetComponent<AnimalAI>());
                 }
             }
-            return; // Bloqueia aqui para fechar o ciclo do Tigre
+            return; 
         }
 
         // ======================================================================================
@@ -186,7 +193,7 @@ public class AnimalAI : MonoBehaviour
             if (distanciaProPlayer < distanciaDetecao) 
             { 
                 agente.SetDestination(player.position); 
-                if (distanciaProPlayer <= 2f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques) AtacarJogador(); 
+                if (distanciaProPlayer <= 2.5f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques) AtacarJogador(); 
             } 
         }
     }
@@ -266,6 +273,15 @@ public class AnimalAI : MonoBehaviour
         if (sfxAtacar != null) emissorAudio.PlayOneShot(sfxAtacar);
 
         if (vfxSangueAtaquePrefab != null) Instantiate(vfxSangueAtaquePrefab, vitima.transform.position + new Vector3(0, 1.0f, 0), Quaternion.identity);
+
+        // ==========================================================
+        // NOVO: Recuperar Vida após matar
+        // ==========================================================
+        if (vitima.vida <= 0 && tipoAnimal == Comportamento.Predador)
+        {
+            vida = vidaMaxima; 
+            Debug.Log("O Tigre matou uma presa e recuperou a sua vida toda!");
+        }
     }
 
     void AndarAleatoriamente() 
