@@ -11,7 +11,7 @@ public class AnimalAI : MonoBehaviour
     [Header("Configurações Principais")]
     public Comportamento tipoAnimal;
     public float vida = 100f;
-    private float vidaMaxima; // NOVO: Guarda a vida inicial para poder curar tudo!
+    private float vidaMaxima; // Guarda a vida inicial para curar predadores
     public float distanciaDetecao = 15f;
     public bool darCarneAoMorrer = true;
 
@@ -52,7 +52,6 @@ public class AnimalAI : MonoBehaviour
         anim = GetComponent<Animator>();
         emissorAudio = GetComponent<AudioSource>(); 
         
-        // Guarda a vida inicial definida no inspector para recuperar mais tarde
         vidaMaxima = vida; 
         
         emissorAudio.spatialBlend = 1.0f; 
@@ -92,20 +91,36 @@ public class AnimalAI : MonoBehaviour
         {
             if (alvoDoPet != null && alvoDoPet.vida > 0)
             {
-                agente.SetDestination(alvoDoPet.transform.position);
-                if (Vector3.Distance(transform.position, alvoDoPet.transform.position) <= 2.5f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques) AtacarOutroAnimal(alvoDoPet);
+                if (Vector3.Distance(agente.destination, alvoDoPet.transform.position) > 0.5f)
+                {
+                    agente.SetDestination(alvoDoPet.transform.position);
+                }
+
+                if (Vector3.Distance(transform.position, alvoDoPet.transform.position) <= 2.5f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques) 
+                {
+                    AtacarOutroAnimal(alvoDoPet);
+                }
             }
             else 
             { 
                 alvoDoPet = null; 
-                if (Vector3.Distance(transform.position, player.position) > 4f) agente.SetDestination(player.position); 
-                else agente.ResetPath(); 
+                if (Vector3.Distance(transform.position, player.position) > 4f) 
+                {
+                    if (Vector3.Distance(agente.destination, player.position) > 1.0f)
+                    {
+                        agente.SetDestination(player.position); 
+                    }
+                }
+                else 
+                {
+                    if (agente.hasPath) agente.ResetPath(); 
+                }
             }
             return; 
         }
 
         // ======================================================================================
-        // 2. COMPORTAMENTO: PRESA (GALINHA/COELHO)
+        // 2. COMPORTAMENTO: PRESA (GALINHA/COELHO/VEADO E PETS QUE FUGIRAM)
         // ======================================================================================
         if (tipoAnimal == Comportamento.Presa) 
         { 
@@ -122,7 +137,6 @@ public class AnimalAI : MonoBehaviour
             float menorDistanciaAlvo = distanciaDetecao;
             bool encontrouPetDomesticado = false;
 
-            // A. Procurar Pets Domesticados
             AnimalAI[] todosAnimais = Object.FindObjectsByType<AnimalAI>(FindObjectsSortMode.None);
             foreach (AnimalAI outroAnimal in todosAnimais)
             {
@@ -138,7 +152,6 @@ public class AnimalAI : MonoBehaviour
                 }
             }
 
-            // B. Se não há cães, atacar o Player
             if (!encontrouPetDomesticado)
             {
                 if (distanciaProPlayer < menorDistanciaAlvo)
@@ -146,7 +159,6 @@ public class AnimalAI : MonoBehaviour
                     alvoFinal = player;
                     menorDistanciaAlvo = distanciaProPlayer;
                 }
-                // C. Se não há player, caçar presas ou animais não domesticados
                 else
                 {
                     foreach (AnimalAI outroAnimal in todosAnimais)
@@ -169,12 +181,13 @@ public class AnimalAI : MonoBehaviour
                 }
             }
 
-            // D. Executar Movimento e Ataque do Predador
             if (alvoFinal != null)
             {
-                agente.SetDestination(alvoFinal.position);
-                
-                // CORREÇÃO AQUI: Mede a distância real em vez da distância de deteção guardada
+                if (Vector3.Distance(agente.destination, alvoFinal.position) > 0.5f)
+                {
+                    agente.SetDestination(alvoFinal.position);
+                }
+
                 float distanciaAtual = Vector3.Distance(transform.position, alvoFinal.position);
                 if (distanciaAtual <= 2.5f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques)
                 {
@@ -186,13 +199,17 @@ public class AnimalAI : MonoBehaviour
         }
 
         // ======================================================================================
-        // 4. COMPORTAMENTO: PET SELVAGEM (CÃO/GATO NÃO DOMESTICADO)
+        // 4. COMPORTAMENTO: PET SELVAGEM PROVOCADO (BATESTE-LHE)
         // ======================================================================================
         if (tipoAnimal == Comportamento.Pet && provocado) 
         { 
             if (distanciaProPlayer < distanciaDetecao) 
             { 
-                agente.SetDestination(player.position); 
+                if (Vector3.Distance(agente.destination, player.position) > 0.5f)
+                {
+                    agente.SetDestination(player.position); 
+                }
+                
                 if (distanciaProPlayer <= 2.5f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques) AtacarJogador(); 
             } 
         }
@@ -231,6 +248,9 @@ public class AnimalAI : MonoBehaviour
 
         if (macasDadas >= macasParaDomesticar)
         {
+            // ==========================================================
+            // DE VOLTA AOS 50% DE CHANCE!
+            // ==========================================================
             if (Random.value <= 0.5f) 
             { 
                 domesticado = true; 
@@ -244,8 +264,14 @@ public class AnimalAI : MonoBehaviour
                 if (AudioManager.instance != null) AudioManager.instance.TocarSFX("SFXFailAdopt"); 
 
                 PlayerInteraction interactionUI = Object.FindFirstObjectByType<PlayerInteraction>();
-                if (interactionUI != null) interactionUI.MostrarMensagemEspecial("The animal didn't like the apples and got offended!", 4f); 
-                AtacarJogador(); tipoAnimal = Comportamento.Presa;
+                if (interactionUI != null) interactionUI.MostrarMensagemEspecial("The animal rejected the food, bit you, and ran away!", 4f); 
+                
+                // Morde-te uma vez
+                AtacarJogador(); 
+                
+                // Transforma-se numa Presa e limpa o caminho para garantir que foge no frame seguinte
+                tipoAnimal = Comportamento.Presa;
+                if (agente.isOnNavMesh) agente.ResetPath();
             }
         }
     }
@@ -274,9 +300,6 @@ public class AnimalAI : MonoBehaviour
 
         if (vfxSangueAtaquePrefab != null) Instantiate(vfxSangueAtaquePrefab, vitima.transform.position + new Vector3(0, 1.0f, 0), Quaternion.identity);
 
-        // ==========================================================
-        // NOVO: Recuperar Vida após matar
-        // ==========================================================
         if (vitima.vida <= 0 && tipoAnimal == Comportamento.Predador)
         {
             vida = vidaMaxima; 
@@ -287,7 +310,13 @@ public class AnimalAI : MonoBehaviour
     void AndarAleatoriamente() 
     { 
         if (!agente.isOnNavMesh || domesticado) return; 
-        if (tipoAnimal == Comportamento.Predador && Vector3.Distance(transform.position, player.position) < distanciaDetecao) return; 
+        
+        float distPlayer = Vector3.Distance(transform.position, player.position);
+        
+        if (tipoAnimal == Comportamento.Presa && distPlayer < distanciaDetecao) return;
+        if (tipoAnimal == Comportamento.Predador && distPlayer < distanciaDetecao) return;
+        if (tipoAnimal == Comportamento.Pet && provocado && distPlayer < distanciaDetecao) return;
+
         Vector3 dir = Random.insideUnitSphere * 10f + transform.position; NavMeshHit hit; 
         if (NavMesh.SamplePosition(dir, out hit, 10f, 1)) agente.SetDestination(hit.position); 
     }
@@ -295,7 +324,18 @@ public class AnimalAI : MonoBehaviour
     void FogirDoPlayer() 
     { 
         if (!agente.isOnNavMesh) return; 
-        agente.SetDestination(transform.position + (transform.position - player.position).normalized * 10f); 
+        
+        if (!agente.hasPath || agente.velocity.sqrMagnitude < 0.2f)
+        {
+            Vector3 direcaoFuga = (transform.position - player.position).normalized;
+            Vector3 pontoDestino = transform.position + direcaoFuga * 15f;
+            
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(pontoDestino, out hit, 5f, NavMesh.AllAreas))
+            {
+                agente.SetDestination(hit.position);
+            }
+        }
         
         if (sfxSofrerDanoEFugir != null && !emissorAudio.isPlaying) emissorAudio.PlayOneShot(sfxSofrerDanoEFugir);
     }
@@ -303,6 +343,8 @@ public class AnimalAI : MonoBehaviour
     public void ReceberDano(float dano, bool porPredador = false) 
     { 
         vida -= dano; 
+        
+        // Se bateres num pet normal que ainda não é teu, ele ataca-te
         if (tipoAnimal == Comportamento.Pet && !domesticado) provocado = true; 
         
         if (sfxSofrerDanoEFugir != null) emissorAudio.PlayOneShot(sfxSofrerDanoEFugir);
