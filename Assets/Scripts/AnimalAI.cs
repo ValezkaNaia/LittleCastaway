@@ -48,6 +48,8 @@ public class AnimalAI : MonoBehaviour
 
     void Start()
     {
+        //Debug.LogError("!!! O SCRIPT CERTO ESTÁ A CORRER !!!");
+
         agente = GetComponent<NavMeshAgent>();
         anim = GetComponent<Animator>();
         emissorAudio = GetComponent<AudioSource>(); 
