@@ -5,6 +5,11 @@ using TMPro;
 
 public class FogueiraUI : MonoBehaviour
 {
+    // =================================================================
+    // NOVO: SINGLETON PARA ACESSO DIRETO SEM BUSCAS FALHADAS
+    // =================================================================
+    public static FogueiraUI instance;
+
     [Header("Slots de Ligação")]
     public FogueiraSlotUI slotEntrada;
     public FogueiraSlotUI slotSaida;
@@ -20,29 +25,56 @@ public class FogueiraUI : MonoBehaviour
 
     void Awake()
     {
+        // Define a instância global estática
+        if (instance == null)
+        {
+            instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         inventoryManager = Object.FindFirstObjectByType<InventoryManager>();
         
-        // Configura as funções dos botões ao clicar
+
         if (botaoCozinhar != null) botaoCozinhar.onClick.AddListener(CozinharAlimento);
         if (botaoAcender != null) botaoAcender.onClick.AddListener(TentarAcenderFogueiraUI);
+    }
+
+    void Start()
+    {
+        // Garante que a UI se esconde sozinha no primeiro frame do jogo de forma segura
+        gameObject.SetActive(false);
     }
 
     // Chamado pelo teu sistema de interação quando abres a fogueira
     public void InicializarInterface(Fogueira fogueiraLogica)
     {
         fogueiraAtual = fogueiraLogica;
+
+        // RESET DO SLOT DE EXIBIÇÃO AO ABRIR O MENU:
+        if (slotSaida != null)
+        {
+            slotSaida.DefinirItem(null); // Começa limpo
+            
+            // Reativa os componentes para o futuro
+            if (slotSaida.GetComponent<UnityEngine.UI.Button>() != null) 
+                slotSaida.GetComponent<UnityEngine.UI.Button>().interactable = true;
+                
+            if (slotSaida.GetComponent<UnityEngine.UI.Image>() != null) 
+                slotSaida.GetComponent<UnityEngine.UI.Image>().raycastTarget = true;
+        }
+
         AtualizarEstadoDaUI();
 
-        // Liberta o rato para o jogador conseguir clicar!
+
         AtivarRato(true);
 
-        // =================================================================
-        // CHAMA O INVENTÁRIO AUTOMATICAMENTE:
+
         InventoryUI invUI = Object.FindFirstObjectByType<InventoryUI>();
-        if (invUI != null)
-        {
-            invUI.AbrirInventarioExterno();
-        }
+        if (invUI != null) invUI.AbrirInventarioExterno();
     }
     // Função auxiliar para controlar o estado do cursor
     private void AtivarRato(bool ativar)
@@ -187,26 +219,42 @@ public class FogueiraUI : MonoBehaviour
             // 1. Esvazia o slot de entrada (consumiu a carne crua)
             slotEntrada.DefinirItem(null);
             
-            // 2. Define visualmente o item no slot de saída da fogueira
-            slotSaida.DefinirItem(alimentoPronto);
+            // 2. MOSTRA A IMAGEM NO SLOT DE SAÍDA
+            if (slotSaida != null)
+            {
+                slotSaida.DefinirItem(alimentoPronto); 
+                
+                // MEDIDA DE SEGURANÇA ANTIDUPLICAÇÃO: 
+                // Desativa o componente de imagem ou o botão do slot para o jogador não conseguir clicar!
+                // Se o teu FogueiraSlotUI usar um componente de Button ou EventTrigger, podemos desativá-lo:
+                if (slotSaida.GetComponent<UnityEngine.UI.Button>() != null)
+                {
+                    slotSaida.GetComponent<UnityEngine.UI.Button>().interactable = false;
+                }
+                
+                // NOTA: Se o teu sistema de clique usar "OnPointerClick" ou uma imagem com Raycast Target,
+                // podes desligar o Raycast para o rato passar por trás e ignorar o clique:
+                if (slotSaida.GetComponent<UnityEngine.UI.Image>() != null)
+                {
+                    slotSaida.GetComponent<UnityEngine.UI.Image>().raycastTarget = false;
+                }
+            }
 
-            // ====================================================================
-            // CORREÇÃO: Envia o item cozinhado para o sistema de stock do Inventário!
-            // ====================================================================
+            // 3. Adiciona o item cozinhado diretamente ao stock do jogador
             if (inventoryManager != null)
             {
-                // Usa a tua função de menu para não poluir a hotbar do jogador
+
                 inventoryManager.AddItemDoMenu(alimentoPronto); 
             }
 
-            // Força a UI do Inventário Geral a redesenhar as quantidades e slots na hora
+            // 4. Força a UI do Inventário Geral a redesenhar instantaneamente
             InventoryUI invUI = Object.FindFirstObjectByType<InventoryUI>();
             if (invUI != null) invUI.AtualizarUI();
-            // ====================================================================
 
-            Debug.Log($"[Culinária] {alimentoCru.itemName} transformado em {alimentoPronto.itemName} e guardado no stock!");
+
+            Debug.Log($"[Culinária] {alimentoCru.itemName} cozinhado! Mostrando imagem de exibição e guardando no stock.");
             
-            // Atualiza os botões da fogueira
+            // 5. Atualiza os botões e estados da fogueira
             AtualizarEstadoDaUI();
         }
     }

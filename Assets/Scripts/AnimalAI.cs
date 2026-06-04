@@ -33,6 +33,7 @@ public class AnimalAI : MonoBehaviour
     public bool provocado = false; 
     public AnimalAI alvoDoPet = null; 
 
+
     // ==========================================
     // NOME DO PET
     // ==========================================
@@ -45,6 +46,7 @@ public class AnimalAI : MonoBehaviour
     [Header("Modo Noturno")] public GameObject olhosBrilhantes; public Transform luzDoSol;
     
     private NavMeshAgent agente; private Animator anim; private Transform player;
+    private bool emCombateComPlayer = false;
 
     void Start()
     {
@@ -71,151 +73,183 @@ public class AnimalAI : MonoBehaviour
     }
 
     void Update()
+{
+    if (vida <= 0 || player == null) return;
+
+    if (olhosBrilhantes != null && luzDoSol != null)
     {
-        if (vida <= 0 || player == null) return;
+        bool estaDeNoite = luzDoSol.forward.y > 0f;
+        if (olhosBrilhantes.activeSelf != estaDeNoite) olhosBrilhantes.SetActive(estaDeNoite);
+    }
 
-        if (olhosBrilhantes != null && luzDoSol != null)
+    if (anim != null) { float vel = agente.velocity.magnitude; anim.SetFloat("Vert", vel); anim.SetFloat("State", vel > 0.1f ? 1f : 0f); }
+
+    if (!agente.isOnNavMesh) { ColarAoNavMesh(); return; }
+
+    float distanciaProPlayer = Vector3.Distance(transform.position, player.position);
+
+    // ======================================================================================
+    // CONTROLO DE ÁUDIO DE PERSEGUIÇÃO/COMBATE (SÓ ATIVA UMA VEZ)
+    // ======================================================================================
+    if (tipoAnimal == Comportamento.Predador)
+    {
+        if (distanciaProPlayer < distanciaDetecao)
         {
-            bool estaDeNoite = luzDoSol.forward.y > 0f;
-            if (olhosBrilhantes.activeSelf != estaDeNoite) olhosBrilhantes.SetActive(estaDeNoite);
-        }
-
-        if (anim != null) { float vel = agente.velocity.magnitude; anim.SetFloat("Vert", vel); anim.SetFloat("State", vel > 0.1f ? 1f : 0f); }
-
-        if (!agente.isOnNavMesh) { ColarAoNavMesh(); return; }
-
-        float distanciaProPlayer = Vector3.Distance(transform.position, player.position);
-
-        // ======================================================================================
-        // 1. COMPORTAMENTO: PET DOMESTICADO
-        // ======================================================================================
-        if (tipoAnimal == Comportamento.Pet && domesticado)
-        {
-            if (alvoDoPet != null && alvoDoPet.vida > 0)
+            // Se o jogador entrou no raio e o Tigre ainda não sabia, ativa o combate!
+            if (!emCombateComPlayer)
             {
-                if (Vector3.Distance(agente.destination, alvoDoPet.transform.position) > 0.5f)
+                emCombateComPlayer = true;
+                if (musicaCombateBoss != null && AudioManager.instance != null) 
                 {
-                    agente.SetDestination(alvoDoPet.transform.position);
+                    AudioManager.instance.MudarMusicaDeFundo(musicaCombateBoss);
                 }
+            }
+        }
+        else
+        {
+            // Se o jogador fugiu do raio e o Tigre ainda achava que estava em combate, desliga tudo!
+            if (emCombateComPlayer)
+            {
+                PararSonsDeCombateFuga();
+            }
+        }
+    }
 
-                if (Vector3.Distance(transform.position, alvoDoPet.transform.position) <= 2.5f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques) 
+    // ======================================================================================
+    // 1. COMPORTAMENTO: PET DOMESTICADO
+    // ======================================================================================
+    if (tipoAnimal == Comportamento.Pet && domesticado)
+    {
+        if (alvoDoPet != null && alvoDoPet.vida > 0)
+        {
+            if (Vector3.Distance(agente.destination, alvoDoPet.transform.position) > 0.5f)
+            {
+                agente.SetDestination(alvoDoPet.transform.position);
+            }
+
+            if (Vector3.Distance(transform.position, alvoDoPet.transform.position) <= 2.5f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques) 
+            {
+                AtacarOutroAnimal(alvoDoPet);
+            }
+        }
+        else 
+        { 
+            alvoDoPet = null; 
+            if (Vector3.Distance(transform.position, player.position) > 4f) 
+            {
+                if (Vector3.Distance(agente.destination, player.position) > 1.0f)
                 {
-                    AtacarOutroAnimal(alvoDoPet);
+                    agente.SetDestination(player.position); 
                 }
             }
             else 
-            { 
-                alvoDoPet = null; 
-                if (Vector3.Distance(transform.position, player.position) > 4f) 
-                {
-                    if (Vector3.Distance(agente.destination, player.position) > 1.0f)
-                    {
-                        agente.SetDestination(player.position); 
-                    }
-                }
-                else 
-                {
-                    if (agente.hasPath) agente.ResetPath(); 
-                }
+            {
+                if (agente.hasPath) agente.ResetPath(); 
             }
-            return; 
         }
+        return; 
+    }
 
-        // ======================================================================================
-        // 2. COMPORTAMENTO: PRESA (GALINHA/COELHO/VEADO E PETS QUE FUGIRAM)
-        // ======================================================================================
-        if (tipoAnimal == Comportamento.Presa) 
-        { 
-            if (distanciaProPlayer < distanciaDetecao) FogirDoPlayer(); 
-            return; 
-        }
-        
-        // ======================================================================================
-        // 3. COMPORTAMENTO: PREDADOR (TIGRE)
-        // ======================================================================================
-        if (tipoAnimal == Comportamento.Predador)
+    // ======================================================================================
+    // 2. COMPORTAMENTO: PRESA
+    // ======================================================================================
+    if (tipoAnimal == Comportamento.Presa) 
+    { 
+        if (distanciaProPlayer < distanciaDetecao) FogirDoPlayer(); 
+        else
         {
-            Transform alvoFinal = null;
-            float menorDistanciaAlvo = distanciaDetecao;
-            bool encontrouPetDomesticado = false;
+            // Se a presa fugiu completamente, para o som de choro/fuga
+            if (emissorAudio.isPlaying && emissorAudio.clip == sfxSofrerDanoEFugir) emissorAudio.Stop();
+        }
+        return; 
+    }
+    
+    // ======================================================================================
+    // 3. COMPORTAMENTO: PREDADOR (TIGRE)
+    // ======================================================================================
+    if (tipoAnimal == Comportamento.Predador)
+    {
+        Transform alvoFinal = null;
+        float menorDistanciaAlvo = distanciaDetecao;
+        bool encontrouPetDomesticado = false;
 
-            AnimalAI[] todosAnimais = Object.FindObjectsByType<AnimalAI>(FindObjectsSortMode.None);
-            foreach (AnimalAI outroAnimal in todosAnimais)
+        AnimalAI[] todosAnimais = Object.FindObjectsByType<AnimalAI>(FindObjectsSortMode.None);
+        foreach (AnimalAI outroAnimal in todosAnimais)
+        {
+            if (outroAnimal != this && outroAnimal.vida > 0 && outroAnimal.tipoAnimal == Comportamento.Pet && outroAnimal.domesticado)
             {
-                if (outroAnimal != this && outroAnimal.vida > 0 && outroAnimal.tipoAnimal == Comportamento.Pet && outroAnimal.domesticado)
+                float dist = Vector3.Distance(transform.position, outroAnimal.transform.position);
+                if (dist < menorDistanciaAlvo)
                 {
-                    float dist = Vector3.Distance(transform.position, outroAnimal.transform.position);
-                    if (dist < menorDistanciaAlvo)
-                    {
-                        alvoFinal = outroAnimal.transform;
-                        menorDistanciaAlvo = dist;
-                        encontrouPetDomesticado = true; 
-                    }
+                    alvoFinal = outroAnimal.transform;
+                    menorDistanciaAlvo = dist;
+                    encontrouPetDomesticado = true; 
                 }
             }
+        }
 
-            if (!encontrouPetDomesticado)
+        if (!encontrouPetDomesticado)
+        {
+            if (distanciaProPlayer < menorDistanciaAlvo)
             {
-                if (distanciaProPlayer < menorDistanciaAlvo)
+                alvoFinal = player;
+                menorDistanciaAlvo = distanciaProPlayer;
+            }
+            else
+            {
+                foreach (AnimalAI outroAnimal in todosAnimais)
                 {
-                    alvoFinal = player;
-                    menorDistanciaAlvo = distanciaProPlayer;
-                }
-                else
-                {
-                    foreach (AnimalAI outroAnimal in todosAnimais)
+                    if (outroAnimal != this && outroAnimal.vida > 0)
                     {
-                        if (outroAnimal != this && outroAnimal.vida > 0)
+                        if (outroAnimal.tipoAnimal == Comportamento.Presa || 
+                            outroAnimal.tipoAnimal == Comportamento.Predador || 
+                            (outroAnimal.tipoAnimal == Comportamento.Pet && !outroAnimal.domesticado))
                         {
-                            if (outroAnimal.tipoAnimal == Comportamento.Presa || 
-                                outroAnimal.tipoAnimal == Comportamento.Predador || 
-                                (outroAnimal.tipoAnimal == Comportamento.Pet && !outroAnimal.domesticado))
+                            float dist = Vector3.Distance(transform.position, outroAnimal.transform.position);
+                            if (dist < menorDistanciaAlvo)
                             {
-                                float dist = Vector3.Distance(transform.position, outroAnimal.transform.position);
-                                if (dist < menorDistanciaAlvo)
-                                {
-                                    alvoFinal = outroAnimal.transform;
-                                    menorDistanciaAlvo = dist;
-                                }
+                                alvoFinal = outroAnimal.transform;
+                                menorDistanciaAlvo = dist;
                             }
                         }
                     }
                 }
             }
+        }
 
-            if (alvoFinal != null)
+        if (alvoFinal != null)
+        {
+            if (Vector3.Distance(agente.destination, alvoFinal.position) > 0.5f)
             {
-                if (Vector3.Distance(agente.destination, alvoFinal.position) > 0.5f)
-                {
-                    agente.SetDestination(alvoFinal.position);
-                }
-
-                float distanciaAtual = Vector3.Distance(transform.position, alvoFinal.position);
-                if (distanciaAtual <= 2.5f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques)
-                {
-                    if (alvoFinal == player) AtacarJogador();
-                    else AtacarOutroAnimal(alvoFinal.GetComponent<AnimalAI>());
-                }
+                agente.SetDestination(alvoFinal.position);
             }
-            return; 
-        }
 
-        // ======================================================================================
-        // 4. COMPORTAMENTO: PET SELVAGEM PROVOCADO (BATESTE-LHE)
-        // ======================================================================================
-        if (tipoAnimal == Comportamento.Pet && provocado) 
-        { 
-            if (distanciaProPlayer < distanciaDetecao) 
-            { 
-                if (Vector3.Distance(agente.destination, player.position) > 0.5f)
-                {
-                    agente.SetDestination(player.position); 
-                }
-                
-                if (distanciaProPlayer <= 2.5f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques) AtacarJogador(); 
-            } 
+            float distanciaAtual = Vector3.Distance(transform.position, alvoFinal.position);
+            if (distanciaAtual <= 2.5f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques)
+            {
+                if (alvoFinal == player) AtacarJogador();
+                else AtacarOutroAnimal(alvoFinal.GetComponent<AnimalAI>());
+            }
         }
+        return; 
     }
+
+    // ======================================================================================
+    // 4. COMPORTAMENTO: PET SELVAGEM PROVOCADO
+    // ======================================================================================
+    if (tipoAnimal == Comportamento.Pet && provocado) 
+    { 
+        if (distanciaProPlayer < distanciaDetecao) 
+        { 
+            if (Vector3.Distance(agente.destination, player.position) > 0.5f)
+            {
+                agente.SetDestination(player.position); 
+            }
+            
+            if (distanciaProPlayer <= 2.5f && Time.time >= tempoDoUltimoAtaque + tempoEntreAtaques) AtacarJogador(); 
+        } 
+    }
+}
 
     public void DefinirAlvoParaPet(AnimalAI novoAlvo) { if (tipoAnimal == Comportamento.Pet && domesticado) alvoDoPet = novoAlvo; }
     
@@ -286,7 +320,7 @@ public class AnimalAI : MonoBehaviour
         if (SurvivalManager.instance != null) SurvivalManager.instance.ReceberDano(danoAtaque); 
         
         if (sfxAtacar != null) emissorAudio.PlayOneShot(sfxAtacar);
-        if (tipoAnimal == Comportamento.Predador && musicaCombateBoss != null && AudioManager.instance != null) AudioManager.instance.MudarMusicaDeFundo(musicaCombateBoss);
+        //if (tipoAnimal == Comportamento.Predador && musicaCombateBoss != null && AudioManager.instance != null) AudioManager.instance.MudarMusicaDeFundo(musicaCombateBoss);
 
         if (vfxSangueAtaquePrefab != null && player != null) Instantiate(vfxSangueAtaquePrefab, player.position + new Vector3(0, 1.0f, 0), Quaternion.identity);
         AnimalAI[] todosAnimais = Object.FindObjectsByType<AnimalAI>(FindObjectsSortMode.None); foreach (AnimalAI pet in todosAnimais) { pet.DefinirAlvoParaPet(this); }
@@ -323,7 +357,7 @@ public class AnimalAI : MonoBehaviour
         if (NavMesh.SamplePosition(dir, out hit, 10f, 1)) agente.SetDestination(hit.position); 
     }
     
-    void FogirDoPlayer() 
+    /*void FogirDoPlayer() 
     { 
         if (!agente.isOnNavMesh) return; 
         
@@ -340,6 +374,45 @@ public class AnimalAI : MonoBehaviour
         }
         
         if (sfxSofrerDanoEFugir != null && !emissorAudio.isPlaying) emissorAudio.PlayOneShot(sfxSofrerDanoEFugir);
+    }*/
+    void FogirDoPlayer() 
+    { 
+        if (!agente.isOnNavMesh) return; 
+        
+        if (!agente.hasPath || agente.velocity.sqrMagnitude < 0.2f)
+        {
+            Vector3 direcaoFuga = (transform.position - player.position).normalized;
+            Vector3 pontoDestino = transform.position + direcaoFuga * 15f;
+            
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(pontoDestino, out hit, 5f, NavMesh.AllAreas))
+            {
+                agente.SetDestination(hit.position);
+            }
+        }
+        
+        // CORREÇÃO: Usar .clip e .Play() com loop para podermos PARAR o áudio quando ele se afastar
+        if (sfxSofrerDanoEFugir != null && !emissorAudio.isPlaying) 
+        {
+            emissorAudio.clip = sfxSofrerDanoEFugir;
+            emissorAudio.loop = true; // Continua a rosnar/gritar enquanto foge ou persegue
+            emissorAudio.Play();
+        }
+    }
+
+    void PararSonsDeCombateFuga()
+    {
+        // Se o áudio do próprio animal estiver a tocar os rosnados de perseguição/fuga, para imediatamente
+        if (emissorAudio.isPlaying && (emissorAudio.clip == sfxAtacar || emissorAudio.clip == sfxSofrerDanoEFugir))
+        {
+            emissorAudio.Stop();
+        }
+
+        // Se for um predador (Tigre) e o jogador fugiu da distância de deteção, desliga a música de boss
+        if (tipoAnimal == Comportamento.Predador && AudioManager.instance != null)
+        {
+            AudioManager.instance.ResetarMusicaParaNormal();
+        }
     }
     
     public void ReceberDano(float dano, bool porPredador = false) 

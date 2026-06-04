@@ -18,39 +18,28 @@ public class Fogueira : MonoBehaviour
 
     void Start()
     {
-        // ==============================================================
-        // NOVO: CONFIGURAÇÃO DE ÁUDIO 3D DA FOGUEIRA
-        // ==============================================================
+
         somFogueira = GetComponent<AudioSource>();
-        somFogueira.spatialBlend = 1.0f; // 1 = Totalmente 3D
-        somFogueira.maxDistance = 15f;   // Deixa de ouvir a 15 metros
+        somFogueira.spatialBlend = 1.0f; 
+        somFogueira.maxDistance = 15f;   
         somFogueira.rolloffMode = AudioRolloffMode.Linear;
-        somFogueira.loop = true; // O fogo crepita infinitamente enquanto está aceso
+        somFogueira.loop = true; 
+
         // ==============================================================
-
-        // Se a variável estiver vazia, faz uma busca inteligente pelos filhos do Canvas
-        if (painelFogueiraUI == null)
+        // CORREÇÃO: Vamos buscar a referência diretamente ao Singleton!
+        // ==============================================================
+        if (FogueiraUI.instance != null)
         {
-            // 1. Encontra o Canvas da cena (que está ativo)
-            Canvas canvasGeral = Object.FindFirstObjectByType<Canvas>();
-            
-            if (canvasGeral != null)
-            {
-                // 2. Procura dentro dele (incluindo objetos desativados) pelo componente FogueiraUI
-                painelFogueiraUI = canvasGeral.GetComponentInChildren<FogueiraUI>(true);
-            }
+            painelFogueiraUI = FogueiraUI.instance;
         }
-
-        // Verificação de segurança para sabermos se correu bem
-        if (painelFogueiraUI == null)
+        else
         {
-            Debug.LogError("Erro Crítico: Não foi possível encontrar o componente FogueiraUI dentro do Canvas!");
+            // Se ainda for nulo (ex: ordem de carregamento), não dês erro já,
+            // porque tentaremos novamente ao interagir!
+            Debug.LogWarning("[Fogueira] FogueiraUI ainda não se registou, vai ligar-se na interação.");
         }
 
         if (efeitoFogoPrefab != null) efeitoFogoPrefab.SetActive(false);
-        
-        // Garante que começa fechado de forma segura
-        if (painelFogueiraUI != null) painelFogueiraUI.gameObject.SetActive(false);
     }
 
     void Update()
@@ -123,22 +112,35 @@ public class Fogueira : MonoBehaviour
     // Função que vais chamar no teu script de Interação (PlayerInteraction) quando o jogador carregar no [E]
     public void AbrirInterfaceFogueira()
     {
+        // SEGUNDA CHANCE: Se por algum motivo falhou no Start, garante a ligação aqui
+        if (painelFogueiraUI == null && FogueiraUI.instance != null)
+        {
+            painelFogueiraUI = FogueiraUI.instance;
+        }
+
         if (painelFogueiraUI != null)
         {
+            // Ativa o objeto antes de chamar qualquer lógica interna
             painelFogueiraUI.gameObject.SetActive(true);
             
             // Avisa o painel de UI qual é a fogueira específica que foi aberta
             painelFogueiraUI.InicializarInterface(this);
         }
+        else
+        {
+            Debug.LogError("Erro Crítico: Não foi possível interagir porque FogueiraUI.instance não existe na cena!");
+        }
     }
 
     public void FecharInterfaceFogueira()
     {
-        if (painelFogueiraUI != null)
-        {
-            painelFogueiraUI.gameObject.SetActive(false);
+        // Garante que usamos a referência certa para fechar
+        var uiParaFechar = painelFogueiraUI != null ? painelFogueiraUI : FogueiraUI.instance;
 
-            // 2. CORREÇÃO DE FOCO: Força o Unity a prender o rato de forma limpa
+        if (uiParaFechar != null)
+        {
+            uiParaFechar.gameObject.SetActive(false);
+            
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
